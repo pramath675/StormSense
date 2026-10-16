@@ -208,7 +208,7 @@
                 <button class="globe-tool-btn" id="btnZoomIn" title="Zoom In">+</button>
                 <button class="globe-tool-btn" id="btnZoomOut" title="Zoom Out">&minus;</button>
                 <button class="globe-tool-btn" id="btnResetView" title="Re-center View">&#9678;</button>
-                <button class="globe-tool-btn" id="btnLayers" title="Toggle Basemap" onclick="app.globe.setBasemap(app.globe.currentLayer === 'dark' ? 'satellite' : 'dark')">&#9776;</button>
+                <button class="globe-tool-btn" id="btnLayers" title="Cycle Basemap (Real Earth / Hybrid / Towns / Dark)" onclick="app.globe.cycleBasemap()">&#9776;</button>
                 <button class="globe-tool-btn" id="btnToggle3D" title="3D / 2D Perspective">3D</button>
             </div>
         </main>
@@ -731,10 +731,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
     <!-- CycloneGuard Application Modules -->
-    <script src="/static/js/i18n.js"></script>
-    <script src="/static/js/globe.js"></script>
-    <script src="/static/js/charts.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/i18n.js?v=2.2"></script>
+    <script src="/static/js/globe.js?v=2.2"></script>
+    <script src="/static/js/charts.js?v=2.2"></script>
+    <script src="/static/js/app.js?v=2.2"></script>
 
     <!-- Thumbnail generator script for timeline -->
     <script>

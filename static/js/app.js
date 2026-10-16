@@ -277,7 +277,7 @@ class CycloneGuardApp {
             else if (loc.risk.toLowerCase() === "high") riskClass = "high";
 
             return `
-                <tr onclick="app.globe.flyToCoordinates(${loc.lat}, ${loc.lon}, 900000.0)">
+                <tr onclick="app.globe.flyToCoordinates(${loc.lat}, ${loc.lon}, 28000.0)" title="Click to zoom in to ${loc.name}">
                     <td style="font-weight: 700; color: #fff;">${loc.name}</td>
                     <td style="color: #94a3b8;">${loc.eta}</td>
                     <td><span class="risk-badge-sm ${riskClass}">${loc.risk}</span></td>
@@ -296,33 +296,57 @@ class CycloneGuardApp {
         }
     }
 
-    handleLocationSearch(query) {
+    async handleLocationSearch(query) {
         if (!query) return;
         const clean = query.trim().toLowerCase();
 
-        // Check if query matches an active storm
+        // 1. Check if query matches an active storm
         const matchedStorm = this.activeStorms.find(s => s.name.toLowerCase().includes(clean));
         if (matchedStorm) {
             this.selectStorm(matchedStorm.id);
             return;
         }
 
-        // Check if query matches a city
-        const cities = [
-            { name: "Puri", lat: 19.8135, lon: 85.8312 },
-            { name: "Kolkata", lat: 22.5726, lon: 88.3639 },
-            { name: "Bhubaneswar", lat: 20.2961, lon: 85.8245 },
-            { name: "Chennai", lat: 13.0827, lon: 80.2707 },
-            { name: "Visakhapatnam", lat: 17.6868, lon: 83.2185 },
-            { name: "Mumbai", lat: 19.0760, lon: 72.8777 },
-            { name: "Dhaka", lat: 23.8103, lon: 90.4125 }
+        // 2. Comprehensive coastal cities & towns dictionary (zooms in to 15km - 35km town level!)
+        const towns = [
+            { name: "Puri", lat: 19.8135, lon: 85.8312, height: 25000.0 },
+            { name: "Paradip", lat: 20.3165, lon: 86.6115, height: 20000.0 },
+            { name: "Bhubaneswar", lat: 20.2961, lon: 85.8245, height: 35000.0 },
+            { name: "Cuttack", lat: 20.4625, lon: 85.8828, height: 30000.0 },
+            { name: "Jagatsinghpur", lat: 20.2644, lon: 86.1717, height: 20000.0 },
+            { name: "Kendrapara", lat: 20.5014, lon: 86.4225, height: 20000.0 },
+            { name: "Balasore", lat: 21.4934, lon: 86.9135, height: 25000.0 },
+            { name: "Chandipur", lat: 21.4700, lon: 87.0160, height: 15000.0 },
+            { name: "Digha", lat: 21.6266, lon: 87.5074, height: 18000.0 },
+            { name: "Sagar Island", lat: 21.6500, lon: 88.1000, height: 28000.0 },
+            { name: "Haldia", lat: 22.0667, lon: 88.0698, height: 25000.0 },
+            { name: "Kolkata", lat: 22.5726, lon: 88.3639, height: 45000.0 },
+            { name: "Gopalpur", lat: 19.2600, lon: 84.9000, height: 18000.0 },
+            { name: "Visakhapatnam", lat: 17.6868, lon: 83.2185, height: 35000.0 },
+            { name: "Chennai", lat: 13.0827, lon: 80.2707, height: 45000.0 },
+            { name: "Mumbai", lat: 19.0760, lon: 72.8777, height: 50000.0 },
+            { name: "Dhaka", lat: 23.8103, lon: 90.4125, height: 45000.0 }
         ];
 
-        const matchedCity = cities.find(c => c.name.toLowerCase().includes(clean));
-        if (matchedCity) {
-            this.globe.flyToCoordinates(matchedCity.lat, matchedCity.lon, 1200000.0);
-        } else {
-            alert(`Searching coordinates for "${query}"...`);
+        const matchedTown = towns.find(t => t.name.toLowerCase().includes(clean));
+        if (matchedTown) {
+            this.globe.flyToCoordinates(matchedTown.lat, matchedTown.lon, matchedTown.height);
+            return;
+        }
+
+        // 3. Fallback to OpenStreetMap geocoding for ANY global town or village!
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+            const results = await res.json();
+            if (results && results.length > 0) {
+                const lat = parseFloat(results[0].lat);
+                const lon = parseFloat(results[0].lon);
+                this.globe.flyToCoordinates(lat, lon, 25000.0);
+            } else {
+                alert(`Location "${query}" not found. Try searching for a city, state, or coastal town.`);
+            }
+        } catch(e) {
+            console.error("Geocoding error:", e);
         }
     }
 
