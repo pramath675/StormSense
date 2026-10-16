@@ -88,23 +88,16 @@ class GlobeEngine {
         const layers = this.viewer.imageryLayers;
         layers.removeAll();
 
-        // Layer A: True Real Earth Satellite Imagery (ArcGIS World Imagery, level 19)
-        const satelliteProvider = new Cesium.UrlTemplateImageryProvider({
-            url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-            maximumLevel: 19,
-            credit: "Esri World Imagery"
+        // Primary: Latest High-Definition Real Earth Satellite (Google Earth Satellite Hybrid, level 20)
+        // Provides modern 2025/2026 satellite photography, sharp sub-meter zoom down to streets & towns
+        const latestEarthProvider = new Cesium.UrlTemplateImageryProvider({
+            url: "https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
+            subdomains: ["0", "1", "2", "3"],
+            maximumLevel: 20,
+            credit: "Google Earth Latest Satellite Imagery"
         });
-        const satLayer = layers.addImageryProvider(satelliteProvider);
+        const satLayer = layers.addImageryProvider(latestEarthProvider);
         satLayer.alpha = 1.0;
-
-        // Layer B: Reference Places, Cities, Towns, Borders Overlay
-        const referenceProvider = new Cesium.UrlTemplateImageryProvider({
-            url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
-            maximumLevel: 19,
-            credit: "Esri Boundaries & Places"
-        });
-        const refLayer = layers.addImageryProvider(referenceProvider);
-        refLayer.alpha = 0.95;
     }
 
     setBasemap(type) {
@@ -112,17 +105,23 @@ class GlobeEngine {
         const layers = this.viewer.imageryLayers;
         layers.removeAll();
 
-        if (type === "satellite") {
-            // High-resolution Real Earth Satellite Imagery + Towns, Cities & Boundaries
+        if (type === "satellite" || type === "latest") {
+            // Latest High-Resolution Real Earth Satellite Imagery (Level 20, modern captures)
             this.applyRealEarthLayers();
-        } else if (type === "hybrid") {
-            // Google Satellite Hybrid (Real Earth Satellite with baked-in Towns, Cities & Roads)
-            const googleHybrid = new Cesium.UrlTemplateImageryProvider({
-                url: "https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}",
-                maximumLevel: 20,
-                credit: "Google Hybrid"
+        } else if (type === "esri") {
+            // Esri World Satellite Imagery
+            const esriProvider = new Cesium.UrlTemplateImageryProvider({
+                url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+                maximumLevel: 19,
+                credit: "Esri World Imagery"
             });
-            layers.addImageryProvider(googleHybrid);
+            layers.addImageryProvider(esriProvider);
+            const refProvider = new Cesium.UrlTemplateImageryProvider({
+                url: "https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}",
+                maximumLevel: 19,
+                credit: "Esri Places"
+            });
+            layers.addImageryProvider(refProvider);
         } else if (type === "osm") {
             // OpenStreetMap Standard (Every village, town, road & street down to zoom 19)
             const osmProvider = new Cesium.OpenStreetMapImageryProvider({
@@ -142,10 +141,10 @@ class GlobeEngine {
     }
 
     cycleBasemap() {
-        const modes = ["satellite", "hybrid", "osm", "topo"];
+        const modes = ["satellite", "esri", "osm", "topo"];
         const labels = {
-            "satellite": "🌍 Real Earth Satellite + Towns & Cities",
-            "hybrid": "🛰️ Google Hybrid Satellite",
+            "satellite": "🛰️ Latest Earth (Google High-Res Satellite 2025/2026)",
+            "esri": "🌍 Esri World Imagery",
             "osm": "🗺️ OpenStreetMap (Towns, Streets & Villages)",
             "topo": "🏔️ Topographic Elevation & Relief"
         };
