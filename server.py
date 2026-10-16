@@ -1141,66 +1141,130 @@ def point_intelligence():
     lat = round(lat, 4)
     lon = round(lon, 4)
 
-    # 1. Reverse geocode / place name identification
-    place_name = "Unknown Location"
+    # 1. High-Precision Reverse Geocode / Place Name & District Identification
+    place_name = ""
+    district_name = ""
     state_name = ""
     country_name = ""
+    is_coastal = False
 
-    known_places = [
-        {"name": "Puri", "state": "Odisha", "country": "India", "lat": 19.8135, "lon": 85.8312},
-        {"name": "Paradip Port", "state": "Odisha", "country": "India", "lat": 20.3165, "lon": 86.6115},
-        {"name": "Jagatsinghpur", "state": "Odisha", "country": "India", "lat": 20.2644, "lon": 86.1717},
-        {"name": "Kendrapara", "state": "Odisha", "country": "India", "lat": 20.5014, "lon": 86.4225},
-        {"name": "Bhubaneswar", "state": "Odisha", "country": "India", "lat": 20.2961, "lon": 85.8245},
-        {"name": "Cuttack", "state": "Odisha", "country": "India", "lat": 20.4625, "lon": 85.8828},
-        {"name": "Balasore", "state": "Odisha", "country": "India", "lat": 21.4934, "lon": 86.9135},
-        {"name": "Chandipur", "state": "Odisha", "country": "India", "lat": 21.4700, "lon": 87.0160},
-        {"name": "Digha", "state": "West Bengal", "country": "India", "lat": 21.6266, "lon": 87.5074},
-        {"name": "Sagar Island", "state": "West Bengal", "country": "India", "lat": 21.6500, "lon": 88.1000},
-        {"name": "Kakdwip", "state": "West Bengal", "country": "India", "lat": 21.8750, "lon": 88.1880},
-        {"name": "Haldia", "state": "West Bengal", "country": "India", "lat": 22.0667, "lon": 88.0698},
-        {"name": "Kolkata", "state": "West Bengal", "country": "India", "lat": 22.5726, "lon": 88.3639},
-        {"name": "Gopalpur", "state": "Odisha", "country": "India", "lat": 19.2600, "lon": 84.9000},
-        {"name": "Visakhapatnam", "state": "Andhra Pradesh", "country": "India", "lat": 17.6868, "lon": 83.2185},
-        {"name": "Chennai", "state": "Tamil Nadu", "country": "India", "lat": 13.0827, "lon": 80.2707},
-        {"name": "Port Blair", "state": "Andaman & Nicobar", "country": "India", "lat": 11.6234, "lon": 92.7265},
-        {"name": "Dhaka", "state": "Dhaka Division", "country": "Bangladesh", "lat": 23.8103, "lon": 90.4125},
-        {"name": "Chittagong", "state": "Chittagong Division", "country": "Bangladesh", "lat": 22.3569, "lon": 91.7832},
-        {"name": "Cox's Bazar", "state": "Chittagong Division", "country": "Bangladesh", "lat": 21.4272, "lon": 92.0058},
-        {"name": "Mumbai", "state": "Maharashtra", "country": "India", "lat": 19.0760, "lon": 72.8777}
+    # Extensive offline database of Indian districts, coastal hubs, and regional capitals
+    offline_districts = [
+        {"name": "Vijayapura", "district": "Vijayapura (Bijapur)", "state": "Karnataka", "country": "India", "lat": 16.8302, "lon": 75.7100, "coastal": False},
+        {"name": "Bagalkot", "district": "Bagalkot", "state": "Karnataka", "country": "India", "lat": 16.1817, "lon": 75.6958, "coastal": False},
+        {"name": "Belagavi", "district": "Belagavi (Belgaum)", "state": "Karnataka", "country": "India", "lat": 15.8497, "lon": 74.4977, "coastal": False},
+        {"name": "Dharwad", "district": "Dharwad", "state": "Karnataka", "country": "India", "lat": 15.4589, "lon": 75.0078, "coastal": False},
+        {"name": "Kalaburagi", "district": "Kalaburagi (Gulbarga)", "state": "Karnataka", "country": "India", "lat": 17.3297, "lon": 76.8343, "coastal": False},
+        {"name": "Raichur", "district": "Raichur", "state": "Karnataka", "country": "India", "lat": 16.2076, "lon": 77.3463, "coastal": False},
+        {"name": "Ballari", "district": "Ballari (Bellary)", "state": "Karnataka", "country": "India", "lat": 15.1394, "lon": 76.9214, "coastal": False},
+        {"name": "Shivamogga", "district": "Shivamogga", "state": "Karnataka", "country": "India", "lat": 13.9299, "lon": 75.5681, "coastal": False},
+        {"name": "Bengaluru", "district": "Bengaluru Urban", "state": "Karnataka", "country": "India", "lat": 12.9716, "lon": 77.5946, "coastal": False},
+        {"name": "Mysuru", "district": "Mysuru", "state": "Karnataka", "country": "India", "lat": 12.2958, "lon": 76.6394, "coastal": False},
+        {"name": "Mangaluru", "district": "Dakshina Kannada", "state": "Karnataka", "country": "India", "lat": 12.9141, "lon": 74.8560, "coastal": True},
+        {"name": "Udupi", "district": "Udupi", "state": "Karnataka", "country": "India", "lat": 13.3409, "lon": 74.7421, "coastal": True},
+        {"name": "Karwar", "district": "Uttara Kannada", "state": "Karnataka", "country": "India", "lat": 14.8135, "lon": 74.1298, "coastal": True},
+        {"name": "Puri", "district": "Puri", "state": "Odisha", "country": "India", "lat": 19.8135, "lon": 85.8312, "coastal": True},
+        {"name": "Paradip Port", "district": "Jagatsinghpur", "state": "Odisha", "country": "India", "lat": 20.3165, "lon": 86.6115, "coastal": True},
+        {"name": "Jagatsinghpur", "district": "Jagatsinghpur", "state": "Odisha", "country": "India", "lat": 20.2644, "lon": 86.1717, "coastal": True},
+        {"name": "Kendrapara", "district": "Kendrapara", "state": "Odisha", "country": "India", "lat": 20.5014, "lon": 86.4225, "coastal": True},
+        {"name": "Cuttack", "district": "Cuttack", "state": "Odisha", "country": "India", "lat": 20.4625, "lon": 85.8828, "coastal": False},
+        {"name": "Bhubaneswar", "district": "Khurda", "state": "Odisha", "country": "India", "lat": 20.2961, "lon": 85.8245, "coastal": False},
+        {"name": "Balasore", "district": "Balasore", "state": "Odisha", "country": "India", "lat": 21.4934, "lon": 86.9135, "coastal": True},
+        {"name": "Chandipur", "district": "Balasore", "state": "Odisha", "country": "India", "lat": 21.4700, "lon": 87.0160, "coastal": True},
+        {"name": "Bhadrak", "district": "Bhadrak", "state": "Odisha", "country": "India", "lat": 21.0574, "lon": 86.4955, "coastal": True},
+        {"name": "Ganjam (Berhampur)", "district": "Ganjam", "state": "Odisha", "country": "India", "lat": 19.3150, "lon": 84.7941, "coastal": True},
+        {"name": "Gopalpur", "district": "Ganjam", "state": "Odisha", "country": "India", "lat": 19.2600, "lon": 84.9000, "coastal": True},
+        {"name": "Kolkata", "district": "Kolkata", "state": "West Bengal", "country": "India", "lat": 22.5726, "lon": 88.3639, "coastal": False},
+        {"name": "Digha", "district": "Purba Medinipur", "state": "West Bengal", "country": "India", "lat": 21.6266, "lon": 87.5074, "coastal": True},
+        {"name": "Sagar Island", "district": "South 24 Parganas", "state": "West Bengal", "country": "India", "lat": 21.6500, "lon": 88.1000, "coastal": True},
+        {"name": "Kakdwip", "district": "South 24 Parganas", "state": "West Bengal", "country": "India", "lat": 21.8750, "lon": 88.1880, "coastal": True},
+        {"name": "Haldia", "district": "Purba Medinipur", "state": "West Bengal", "country": "India", "lat": 22.0667, "lon": 88.0698, "coastal": True},
+        {"name": "Visakhapatnam", "district": "Visakhapatnam", "state": "Andhra Pradesh", "country": "India", "lat": 17.6868, "lon": 83.2185, "coastal": True},
+        {"name": "Kakinada", "district": "Kakinada", "state": "Andhra Pradesh", "country": "India", "lat": 16.9891, "lon": 82.2475, "coastal": True},
+        {"name": "Machilipatnam", "district": "Krishna", "state": "Andhra Pradesh", "country": "India", "lat": 16.1875, "lon": 81.1389, "coastal": True},
+        {"name": "Nellore", "district": "SPSR Nellore", "state": "Andhra Pradesh", "country": "India", "lat": 14.4426, "lon": 79.9865, "coastal": True},
+        {"name": "Chennai", "district": "Chennai", "state": "Tamil Nadu", "country": "India", "lat": 13.0827, "lon": 80.2707, "coastal": True},
+        {"name": "Nagapattinam", "district": "Nagapattinam", "state": "Tamil Nadu", "country": "India", "lat": 10.7672, "lon": 79.8424, "coastal": True},
+        {"name": "Kochi", "district": "Ernakulam", "state": "Kerala", "country": "India", "lat": 9.9312, "lon": 76.2673, "coastal": True},
+        {"name": "Thiruvananthapuram", "district": "Thiruvananthapuram", "state": "Kerala", "country": "India", "lat": 8.5241, "lon": 76.9366, "coastal": True},
+        {"name": "Mumbai", "district": "Mumbai", "state": "Maharashtra", "country": "India", "lat": 19.0760, "lon": 72.8777, "coastal": True},
+        {"name": "Pune", "district": "Pune", "state": "Maharashtra", "country": "India", "lat": 18.5204, "lon": 73.8567, "coastal": False},
+        {"name": "Solapur", "district": "Solapur", "state": "Maharashtra", "country": "India", "lat": 17.6599, "lon": 75.9064, "coastal": False},
+        {"name": "Hyderabad", "district": "Hyderabad", "state": "Telangana", "country": "India", "lat": 17.3850, "lon": 78.4867, "coastal": False},
+        {"name": "Port Blair", "district": "South Andaman", "state": "Andaman & Nicobar", "country": "India", "lat": 11.6234, "lon": 92.7265, "coastal": True},
+        {"name": "Panaji", "district": "North Goa", "state": "Goa", "country": "India", "lat": 15.4909, "lon": 73.8278, "coastal": True},
+        {"name": "Surat", "district": "Surat", "state": "Gujarat", "country": "India", "lat": 21.1702, "lon": 72.8311, "coastal": True},
+        {"name": "Chittagong", "district": "Chittagong", "state": "Chittagong Division", "country": "Bangladesh", "lat": 22.3569, "lon": 91.7832, "coastal": True},
+        {"name": "Cox's Bazar", "district": "Cox's Bazar", "state": "Chittagong Division", "country": "Bangladesh", "lat": 21.4272, "lon": 92.0058, "coastal": True}
     ]
 
-    matched_known = next((p for p in known_places if haversine_km(p["lat"], p["lon"], lat, lon) <= 22.0), None)
-    if matched_known:
-        place_name = matched_known["name"]
-        state_name = matched_known["state"]
-        country_name = matched_known["country"]
-    else:
-        # Check marine zone
-        if 5.0 <= lat <= 23.5 and 80.0 <= lon <= 94.0:
-            place_name = f"Bay of Bengal (Offshore {lat:.2f}°N, {lon:.2f}°E)"
+    # Try live high-speed client-free reverse geocode (BigDataCloud)
+    try:
+        url_bg = f"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}&longitude={lon}&localityLanguage=en"
+        r_geo = requests.get(url_bg, headers={"User-Agent": "CycloneGuardAI/3.0"}, timeout=2.2)
+        if r_geo.status_code == 200:
+            g_data = r_geo.json()
+            city = g_data.get("city") or g_data.get("locality")
+            subdiv = g_data.get("principalSubdivision") or ""
+            c_name = g_data.get("countryName") or ""
+            admin_list = [x.get("name") for x in g_data.get("localityInfo", {}).get("administrative", []) if x.get("name")]
+            
+            # Extract district
+            d_found = None
+            for item in admin_list:
+                if "district" in item.lower():
+                    d_found = item.replace(" District", "").replace(" district", "").strip()
+                    break
+
+            if city or d_found:
+                place_name = city or d_found
+                district_name = d_found or city
+                state_name = subdiv
+                country_name = c_name
+    except Exception:
+        pass
+
+    # If reverse geocoder didn't return or was offline, match closest district
+    if not place_name:
+        closest_d = min(offline_districts, key=lambda d: haversine_km(d["lat"], d["lon"], lat, lon))
+        dist_d = haversine_km(closest_d["lat"], closest_d["lon"], lat, lon)
+        if dist_d <= 85.0:
+            place_name = closest_d["name"]
+            district_name = closest_d["district"]
+            state_name = closest_d["state"]
+            country_name = closest_d["country"]
+            is_coastal = closest_d.get("coastal", False)
+
+    # If point is genuinely in open waters (no land identified and far from coast)
+    if not place_name or country_name in ["", "Maritime Zone"]:
+        if 5.0 <= lat <= 23.5 and 80.5 <= lon <= 94.0:
+            place_name = f"Bay of Bengal (Maritime Waters {lat:.2f}°N, {lon:.2f}°E)"
+            district_name = "Bay of Bengal Deep Sea"
+            state_name = "North Indian Ocean"
             country_name = "Maritime Zone"
-        elif 5.0 <= lat <= 24.0 and 60.0 <= lon <= 77.0:
-            place_name = f"Arabian Sea (Offshore {lat:.2f}°N, {lon:.2f}°E)"
+        elif 5.0 <= lat <= 24.0 and 58.0 <= lon <= 74.0:
+            place_name = f"Arabian Sea (Maritime Waters {lat:.2f}°N, {lon:.2f}°E)"
+            district_name = "Arabian Sea Deep Sea"
+            state_name = "North Indian Ocean"
             country_name = "Maritime Zone"
-        elif 9.0 <= lat <= 15.0 and 93.0 <= lon <= 99.0:
-            place_name = f"Andaman Sea ({lat:.2f}°N, {lon:.2f}°E)"
+        elif 8.0 <= lat <= 15.0 and 92.5 <= lon <= 98.0:
+            place_name = f"Andaman Sea (Maritime Waters {lat:.2f}°N, {lon:.2f}°E)"
+            district_name = "Andaman Sea Basin"
+            state_name = "North Indian Ocean"
             country_name = "Maritime Zone"
         else:
-            try:
-                r_geo = requests.get(
-                    f"https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lon}&zoom=11",
-                    headers={"User-Agent": "CycloneGuardAI/2.0"},
-                    timeout=1.2
-                )
-                if r_geo.status_code == 200:
-                    g_data = r_geo.json()
-                    addr = g_data.get("address", {})
-                    place_name = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("suburb") or addr.get("county") or g_data.get("name") or f"Point ({lat:.2f}°N, {lon:.2f}°E)"
-                    state_name = addr.get("state") or addr.get("region") or ""
-                    country_name = addr.get("country") or ""
-            except Exception:
-                place_name = f"Location ({lat:.2f}°N, {lon:.2f}°E)"
+            place_name = f"Location Point ({lat:.2f}°N, {lon:.2f}°E)"
+            district_name = "Local Coordinate Sector"
+            state_name = ""
+            country_name = "Subcontinent Region"
+
+    if not district_name:
+        district_name = place_name
+
+    formatted_place = (
+        f"District: {district_name} · {state_name}, {country_name}" if state_name and country_name
+        else f"{place_name} ({lat:.3f}°N, {lon:.3f}°E)"
+    )
 
     # 2. Live Weather Telemetry
     weather_data = None
@@ -1236,7 +1300,7 @@ def point_intelligence():
     if not weather_data:
         d_remal = haversine_km(18.2, 88.6, lat, lon)
         ambient_pres = round(1012.0 - max(0.0, (62.0 / max(1.0, (d_remal / 45.0) ** 0.65))), 1)
-        ambient_wind = round(max(18.0, 185.0 * math.exp(-d_remal / 240.0)), 1)
+        ambient_wind = round(max(14.0, 185.0 * math.exp(-d_remal / 240.0)), 1)
         weather_data = {
             "temperature_c": round(29.0 - (ambient_wind * 0.03), 1),
             "feels_like_c": round(34.5 - (ambient_wind * 0.02), 1),
@@ -1245,15 +1309,16 @@ def point_intelligence():
             "wind_kph": ambient_wind,
             "wind_gusts_kph": round(ambient_wind * 1.35, 1),
             "wind_direction_deg": 125,
-            "precipitation_mm": round(max(2.0, (ambient_wind / 6.0)), 1),
+            "precipitation_mm": round(max(1.0, (ambient_wind / 8.0)), 1),
             "condition": "Severe Cyclonic Squalls" if ambient_wind > 80 else "Heavy Rain Bands" if ambient_wind > 50 else "Tropical Overcast"
         }
 
-    # 3. Cyclone Hazard & Impact Assessment for this particular place
+    # 3. Cyclone Hazard & Approaching Storm Description
     active_storms = CACHE.get("active_storms", [])
     if not active_storms:
         active_storms = fetch_and_synthesize_active_storms()
 
+    # Distances to each active storm
     storm_assessments = []
     for storm in active_storms:
         d_eye = haversine_km(storm["current_lat"], storm["current_lon"], lat, lon)
@@ -1275,21 +1340,66 @@ def point_intelligence():
             "min_track_distance_km": round(min_track_dist, 1),
             "closest_pt": closest_pt,
             "current_wind_kph": storm["wind_kph"],
-            "current_pressure_hpa": storm["pressure_hpa"]
+            "current_pressure_hpa": storm["pressure_hpa"],
+            "forward_speed_kph": storm.get("forward_speed_kph", 15.0),
+            "landfall_expected": storm.get("landfall_expected", "18 Oct 06:00 AM IST")
         })
 
+    # Identify primary storm
     primary_threat = min(storm_assessments, key=lambda x: min(x["distance_to_eye_km"], x["min_track_distance_km"]))
-    dist_to_threat = primary_threat["min_track_distance_km"]
+    dist_eye = primary_threat["distance_to_eye_km"]
+    dist_track = primary_threat["min_track_distance_km"]
 
-    if dist_to_threat <= 85.0:
+    # Check whether location is coastal (within 35 km of ocean)
+    coastal_cities = [p for p in offline_districts if p.get("coastal")]
+    min_dist_to_coast = min(haversine_km(c["lat"], c["lon"], lat, lon) for c in coastal_cities)
+    is_location_coastal = (min_dist_to_coast <= 35.0) or ("Maritime" in country_name) or ("Bay of Bengal" in place_name) or ("Arabian Sea" in place_name)
+
+    closest_pt = primary_threat.get("closest_pt")
+    eta_str = closest_pt.get("timestamp") if closest_pt else primary_threat.get("landfall_expected", "18 Oct 06:00 AM IST")
+    if "T" in str(eta_str):
+        try:
+            d_obj = datetime.strptime(eta_str.split(".")[0].replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
+            eta_str = d_obj.strftime("%d %b, %I:%M %p IST")
+        except Exception:
+            eta_str = "18 Oct 06:00 AM IST"
+
+    remal_storm = next((s for s in storm_assessments if s["storm_id"] == "REMAL"), None)
+    d_remal = remal_storm["distance_to_eye_km"] if remal_storm else 1150
+    sys91w_storm = next((s for s in storm_assessments if s["storm_id"] == "SYSTEM_91W"), None)
+    d_91w = sys91w_storm["distance_to_eye_km"] if sys91w_storm else 940
+
+    # Determine Threat Level & Detailed Storm Description
+    if "Maritime" in country_name or "Sea" in place_name or "Bay of Bengal" in place_name:
+        threat_level = "MARITIME ADVISORY (Rough Sea State & Gale Waves)"
+        threat_badge = "HIGH ALERT"
+        threat_color = "#f59e0b"
+        max_wind_proj = "90 - 150 km/h (Deep Sea Gale)"
+        expected_rain_proj = "150 - 250 mm"
+        surge_risk = "5.5 - 8.2 meters significant wave height"
+        civil_action = "DEEP SEA WARNING: Total suspension of fishing operations, merchant vessel navigation, and offshore operations."
+        storm_description = (
+            f"🌊 **DEEP SEA MARITIME WARNING:** Located in **{place_name}**. "
+            f"Active weather system **{primary_threat['full_title']} ({primary_threat['category']})** is centered "
+            f"{primary_threat['distance_to_eye_km']} km away, generating severe gale squalls ({max_wind_proj}) and high sea swells of {surge_risk}. "
+            f"All marine vessels must return to shore or divert away immediately."
+        )
+    elif is_location_coastal and dist_track <= 95.0:
         threat_level = "CRITICAL (Direct Eyewall Landfall Zone)"
         threat_badge = "CRITICAL"
         threat_color = "#ef4444"
-        max_wind_proj = "175 - 215 km/h"
+        max_wind_proj = "180 - 220 km/h (Destructive Core)"
         expected_rain_proj = "220 - 320 mm (Extreme Flood Risk)"
         surge_risk = "3.8 - 5.0 meters coastal inundation"
-        civil_action = "MANDATORY EVACUATION: Move immediately to reinforced multi-purpose cyclone shelters. Disconnect power mains and secure potable water."
-    elif dist_to_threat <= 180.0:
+        civil_action = "MANDATORY EVACUATION: Move immediately to reinforced cyclone shelters. Disconnect power mains and secure potable water."
+        storm_description = (
+            f"⚠️ **DIRECT CYCLONE THREAT:** **{primary_threat['full_title']} ({primary_threat['category']})** is advancing at "
+            f"{primary_threat['forward_speed_kph']} km/h directly towards the **{district_name} ({state_name})** coastal corridor. "
+            f"Landfall is projected near this district around **{eta_str}** with destructive gale-force winds of **{max_wind_proj}**, "
+            f"extreme precipitation of **{expected_rain_proj}**, and catastrophic tidal storm surge of **{surge_risk}**. "
+            f"Residents must evacuate immediately to designated multi-purpose cyclone shelters."
+        )
+    elif is_location_coastal and dist_track <= 220.0:
         threat_level = "HIGH RISK (Severe Gale Winds & Heavy Surge)"
         threat_badge = "HIGH"
         threat_color = "#f59e0b"
@@ -1297,7 +1407,13 @@ def point_intelligence():
         expected_rain_proj = "160 - 240 mm (High Inundation Risk)"
         surge_risk = "2.5 - 3.8 meters tidal breach potential"
         civil_action = "HIGH ALERT: Remain indoors in pucca structures. Fishermen must halt all sea operations. Stock 72-hour provisions."
-    elif dist_to_threat <= 350.0:
+        storm_description = (
+            f"⚠️ **APPROACHING SEVERE CYCLONE:** **{primary_threat['full_title']}** is tracking northwest toward coastal Odisha and West Bengal. "
+            f"The storm center is currently {primary_threat['distance_to_eye_km']} km away from **{district_name}**, with peak impact "
+            f"expected around **{eta_str}**. Coastal districts will experience severe gale winds ({max_wind_proj}), torrential rain bands ({expected_rain_proj}), "
+            f"and tidal surge of {surge_risk}. Suspend all marine and beach operations."
+        )
+    elif is_location_coastal and dist_track <= 420.0:
         threat_level = "MODERATE RISK (Squally Winds & Rain Feeder Bands)"
         threat_badge = "MODERATE"
         threat_color = "#00d2ff"
@@ -1305,22 +1421,27 @@ def point_intelligence():
         expected_rain_proj = "90 - 160 mm (Waterlogging Likely)"
         surge_risk = "1.5 - 2.5 meters high sea swell"
         civil_action = "CAUTION ADVISED: Secure rooftop tin sheets and outdoor hoardings. Keep emergency batteries and communications charged."
-    elif dist_to_threat <= 650.0:
-        threat_level = "WATCH ZONE (Outer Cloud Bands & Elevated Swell)"
-        threat_badge = "WATCH"
-        threat_color = "#38bdf8"
-        max_wind_proj = "45 - 75 km/h"
-        expected_rain_proj = "40 - 80 mm"
-        surge_risk = "Elevated rip currents and rough sea state"
-        civil_action = "MONITOR ADVISORIES: Follow IMD bulletins and district administration directives. Sea bathing prohibited."
+        storm_description = (
+            f"⚠️ **PERIPHERAL CYCLONE ALERT:** **{primary_threat['full_title']}** is centered {primary_threat['distance_to_eye_km']} km away in the Bay of Bengal. "
+            f"While the primary eyewall makes landfall further along the coast, **{district_name}** will be swept by active outer feeder squalls, "
+            f"bringing strong gusty winds of {max_wind_proj} and localized heavy showers ({expected_rain_proj}). Follow district disaster advisories."
+        )
     else:
-        threat_level = "LOW RISK (Outside Direct Cyclonic Threat Corridor)"
-        threat_badge = "LOW"
+        # INLAND OR SAFE LOCATION (e.g. Vijayapura, Bengaluru, Pune, Solapur, Hyderabad, etc.)
+        threat_level = "LOW RISK (Inland — Outside Direct Cyclone Corridor)"
+        threat_badge = "LOW RISK"
         threat_color = "#10b981"
-        max_wind_proj = "20 - 45 km/h"
-        expected_rain_proj = "10 - 30 mm"
-        surge_risk = "Normal astronomical tides"
-        civil_action = "NORMAL PRECAUTIONS: Routine monsoon / marine awareness."
+        max_wind_proj = "15 - 30 km/h (Normal Local Breeze)"
+        expected_rain_proj = "5 - 20 mm (Scattered Light Showers)"
+        surge_risk = "Not Applicable (Inland Location — No Sea Surge Hazard)"
+        civil_action = "NORMAL INLAND CONDITIONS: Routine awareness. No evacuation required."
+        storm_description = (
+            f"🛡️ **SAFE / NO DIRECT CYCLONE THREAT:** No tropical cyclone or severe storm is heading toward **{district_name} ({state_name})**. "
+            f"The active cyclonic systems in the subcontinent region are **Cyclone REMAL (Category 3)**, currently centered "
+            f"~{d_remal:.0f} km away in the Bay of Bengal moving toward coastal Odisha/West Bengal, and **System 91W**, located "
+            f"~{d_91w:.0f} km away over southwest waters. **{district_name}** is situated safely inland on high ground with routine local weather "
+            f"and zero storm surge vulnerability."
+        )
 
     # Nearest shelter calculation
     shelters = CACHE.get("shelters", [])
@@ -1339,17 +1460,16 @@ def point_intelligence():
             "location": sh_obj["location"]
         }
 
-    closest_pt = primary_threat.get("closest_pt")
-    eta_str = closest_pt.get("timestamp") if closest_pt else "18 Oct 2025, 06:00 AM IST"
-
     return jsonify({
         "status": "SUCCESS",
         "coordinates": {"lat": lat, "lon": lon},
         "place": {
             "name": place_name,
+            "district": district_name,
             "state": state_name,
             "country": country_name,
-            "formatted": f"{place_name}{', ' + state_name if state_name else ''}{', ' + country_name if country_name else ''}"
+            "is_coastal": is_location_coastal,
+            "formatted": formatted_place
         },
         "weather": weather_data,
         "cyclone_impact": {
@@ -1365,6 +1485,7 @@ def point_intelligence():
             "projected_peak_winds": max_wind_proj,
             "expected_rainfall": expected_rain_proj,
             "storm_surge_risk": surge_risk,
+            "storm_description": storm_description,
             "civil_action_advisory": civil_action,
             "nearest_shelter": nearest_shelter
         }

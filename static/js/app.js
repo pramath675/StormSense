@@ -614,7 +614,11 @@ class CycloneGuardApp {
             // 1. Place name & coordinates
             const placeTitle = p.name || `Location (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)`;
             if (placeNameEl) placeNameEl.textContent = placeTitle;
-            if (coordsEl) coordsEl.textContent = p.formatted || `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
+            if (coordsEl) {
+                const subLoc = p.district ? `${p.district}${p.state ? ', ' + p.state : ''}` : (p.state || p.country || '');
+                const coordStr = `${Math.abs(lat).toFixed(3)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(3)}° ${lon >= 0 ? 'E' : 'W'}`;
+                coordsEl.textContent = subLoc ? `${subLoc} · ${coordStr}` : coordStr;
+            }
             if (this.globe && this.globe.updateInspectionPinLabel) {
                 this.globe.updateInspectionPinLabel(placeTitle);
             }
@@ -630,11 +634,27 @@ class CycloneGuardApp {
 
             // 3. Cyclone Threat & Impact Assessment
             const threatBadge = (impact.threat_badge || "WATCH").toUpperCase();
-            badgeEl.className = `pic-threat-badge ${threatBadge.toLowerCase()}`;
+            badgeEl.className = `pic-threat-badge ${threatBadge.toLowerCase().replace(/\s+/g, '-')}`;
             badgeEl.textContent = threatBadge;
 
             const stormName = impact.threatening_cyclone || "Cyclone REMAL";
-            document.getElementById("picThreatTitle").innerHTML = `🌀 ${stormName}`;
+            if (threatBadge.includes("LOW") || threatBadge.includes("SAFE")) {
+                document.getElementById("picThreatTitle").innerHTML = `🛡️ ${stormName}`;
+                badgeEl.style.background = "#10b981";
+                badgeEl.style.color = "#ffffff";
+            } else if (threatBadge === "CRITICAL") {
+                document.getElementById("picThreatTitle").innerHTML = `⚠️ Direct Threat: ${stormName}`;
+                badgeEl.style.background = "#ef4444";
+                badgeEl.style.color = "#ffffff";
+            } else if (threatBadge === "HIGH") {
+                document.getElementById("picThreatTitle").innerHTML = `⚠️ Approaching: ${stormName}`;
+                badgeEl.style.background = "#f59e0b";
+                badgeEl.style.color = "#ffffff";
+            } else {
+                document.getElementById("picThreatTitle").innerHTML = `🌀 ${stormName}`;
+                badgeEl.style.background = "#00d2ff";
+                badgeEl.style.color = "#03112c";
+            }
             
             const distCenter = impact.distance_to_center_km ? `${impact.distance_to_center_km} km` : "> 500 km";
             const distClosest = impact.closest_approach_distance_km ? ` (Closest: ${impact.closest_approach_distance_km} km)` : "";
@@ -642,10 +662,12 @@ class CycloneGuardApp {
             
             // Format ETA
             let etaFormatted = impact.closest_approach_eta || "Next 48 Hours";
-            if (etaFormatted.includes("T")) {
+            if (typeof etaFormatted === "string" && etaFormatted.includes("-") && etaFormatted.includes("T")) {
                 try {
                     const d = new Date(etaFormatted);
-                    etaFormatted = d.toLocaleDateString("en-GB", { day: '2-digit', month: 'short' }) + " " + d.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' }) + " IST";
+                    if (!isNaN(d.getTime())) {
+                        etaFormatted = d.toLocaleDateString("en-GB", { day: '2-digit', month: 'short' }) + " " + d.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' }) + " IST";
+                    }
                 } catch(e) {}
             }
             document.getElementById("picETA").textContent = etaFormatted;
@@ -654,25 +676,32 @@ class CycloneGuardApp {
             document.getElementById("picExpectedRain").textContent = impact.expected_rainfall || "--";
             document.getElementById("picSurge").textContent = impact.storm_surge_risk || "--";
 
-            // 4. Civil Advisory & Nearest Shelter
+            // 4. Detailed Approaching Storm Description & Advisory
             const advEl = document.getElementById("picAdvisory");
-            advEl.textContent = impact.civil_action_advisory || "Monitor local meteorological warnings and remain alert.";
+            const rawDesc = impact.storm_description || impact.civil_action_advisory || "Monitor local meteorological warnings and remain alert.";
+            const formattedDesc = rawDesc
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n\n/g, '<br><br>')
+                .replace(/\n/g, '<br>');
+            advEl.innerHTML = formattedDesc;
+
             if (threatBadge === "CRITICAL") {
                 advEl.style.borderLeftColor = "#ef4444";
                 advEl.style.color = "#fca5a5";
-                advEl.style.background = "rgba(239, 68, 68, 0.12)";
-            } else if (threatBadge === "HIGH") {
+                advEl.style.background = "rgba(239, 68, 68, 0.14)";
+            } else if (threatBadge === "HIGH" || threatBadge.includes("ALERT")) {
                 advEl.style.borderLeftColor = "#f59e0b";
                 advEl.style.color = "#fde68a";
-                advEl.style.background = "rgba(245, 158, 11, 0.12)";
+                advEl.style.background = "rgba(245, 158, 11, 0.14)";
             } else if (threatBadge === "MODERATE") {
-                advEl.style.borderLeftColor = "#eab308";
-                advEl.style.color = "#fef08a";
-                advEl.style.background = "rgba(234, 179, 8, 0.12)";
+                advEl.style.borderLeftColor = "#00d2ff";
+                advEl.style.color = "#bae6fd";
+                advEl.style.background = "rgba(0, 210, 255, 0.12)";
             } else {
                 advEl.style.borderLeftColor = "#10b981";
                 advEl.style.color = "#a7f3d0";
-                advEl.style.background = "rgba(16, 185, 129, 0.12)";
+                advEl.style.background = "rgba(16, 185, 129, 0.14)";
             }
 
             const shelter = impact.nearest_shelter;
