@@ -1,0 +1,37 @@
+[
+  {
+    "id": "SUB_PURI_DEFAULT",
+    "location_name": "Puri Coastal Defense Base",
+    "lat": 19.8135,
+    "lon": 85.8312,
+    "threshold_km": 300,
+    "user_name": "Odisha Disaster Management Cell",
+    "telegram_chat_id": "",
+    "telegram_bot_token": "",
+    "registered_at": "2026-10-16T14:06:45.690526+00:00",
+    "last_alerted_key": "SUB_PURI_DEFAULT_CYC_NIO_2026_01"
+  },
+  {
+    "id": "SUB_CHENNAI_DEFAULT",
+    "location_name": "Chennai Port Trust",
+    "lat": 13.0827,
+    "lon": 80.2707,
+    "threshold_km": 250,
+    "user_name": "Tamil Nadu Marine Safety Cell",
+    "telegram_chat_id": "",
+    "telegram_bot_token": "",
+    "registered_at": "2026-10-16T14:06:45.690574+00:00"
+  },
+  {
+    "id": "SUB_1792160241_3",
+    "location_name": "Puri Marine Base",
+    "lat": 19.8135,
+    "lon": 85.8312,
+    "threshold_km": 250.0,
+    "user_name": "Chief Commander",
+    "telegram_chat_id": "",
+    "telegram_bot_token": "",
+    "registered_at": "2026-10-16T14:17:21.410921+00:00",
+    "last_alerted_key": "SUB_1792160241_3_CYC_NIO_2026_01"
+  }
+]

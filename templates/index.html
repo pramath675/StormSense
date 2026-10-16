@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CycloneGuard AI — Real-Time Cyclone Risk Intelligence</title>
+    <meta name="description" content="Predict · Assess · Explain · Prepare · Protect — Live 3D geospatial cyclone tracking, ML multi-horizon forecasting, and community early warning intelligence system.">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- CesiumJS CSS -->
+    <link rel="stylesheet" href="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Widgets/widgets.css">
+
+    <!-- CycloneGuard AI Style -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <!-- 1. TOP HEADER BAR -->
+    <header id="cg-header">
+        <div class="header-left">
+            <a href="/" class="brand-logo-wrap">
+                <div class="cyclone-logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M12 2a10 10 0 0 0-9.8 12.2l-1.7 1.7a12 12 0 1 1 18.9 0l-1.7-1.7A10 10 0 0 0 12 2z"></path>
+                        <path d="M12 6a6 6 0 0 0-5.8 7.3l-1.8 1.8a8 8 0 1 1 12.7 0l-1.8-1.8A6 6 0 0 0 12 6z"></path>
+                    </svg>
+                </div>
+                <div class="brand-text-block">
+                    <div class="brand-title">CycloneGuard <span class="ai-tag">AI</span></div>
+                    <div class="brand-subtitle">Real-Time Cyclone Risk Intelligence</div>
+                    <div class="brand-motto">Predict · Assess · Explain · Prepare · Protect</div>
+                </div>
+            </a>
+
+            <!-- Universal Search Box -->
+            <div class="header-search-wrap">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="headerLocationSearch" class="header-search-input" placeholder="Search location (country, state, city or coordinates...)">
+            </div>
+        </div>
+
+        <!-- Header Right: Clock, Live Badge, and Top Stats -->
+        <div class="header-right">
+            <div class="clock-live-block">
+                <span id="headerLiveClock">17 Oct 2025  10:30:24 IST</span>
+                <span class="live-pill">
+                    <span style="width: 5px; height: 5px; border-radius: 50%; background: #fff;"></span>
+                    + LIVE
+                </span>
+            </div>
+
+            <!-- 5 KPI Chips -->
+            <div class="header-kpi-chips">
+                <div class="kpi-stat-box">
+                    <span style="color: #38bdf8;">🌀</span>
+                    <div>
+                        <div class="kpi-label">Active Cyclones</div>
+                        <div class="kpi-value" id="kpiActiveCyclones">3</div>
+                    </div>
+                </div>
+
+                <div class="kpi-stat-box">
+                    <span style="color: #10b981;">📍</span>
+                    <div>
+                        <div class="kpi-label">Monitored Regions</div>
+                        <div class="kpi-value" id="kpiMonitoredRegions">245</div>
+                    </div>
+                </div>
+
+                <div class="kpi-stat-box">
+                    <span style="color: #34d399;">👥</span>
+                    <div>
+                        <div class="kpi-label">People at Risk</div>
+                        <div class="kpi-value" id="kpiPeopleAtRisk" style="color: #34d399;">12.4 M</div>
+                    </div>
+                </div>
+
+                <div class="kpi-stat-box">
+                    <span style="color: #ef4444;">⚠️</span>
+                    <div>
+                        <div class="kpi-label">Critical Alerts</div>
+                        <div class="kpi-value" id="kpiCriticalAlerts" style="color: #ef4444;">5</div>
+                    </div>
+                </div>
+
+                <div class="kpi-stat-box">
+                    <span style="color: #00d2ff;">🗄️</span>
+                    <div>
+                        <div class="kpi-label">Data Sources</div>
+                        <div class="kpi-value" id="kpiDataSources" style="color: #00d2ff;">8 / 8 Online</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multi-Language Localization Toggle -->
+            <div class="header-lang-switch">
+                <button class="header-lang-btn active" data-lang="en">EN</button>
+                <button class="header-lang-btn" data-lang="hi">हिंदी</button>
+                <button class="header-lang-btn" data-lang="kn">ಕನ್ನಡ</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 2. MAIN WORKSPACE: LEFT NAV + 3D GLOBE + RIGHT PANEL -->
+    <div id="cg-workspace">
+
+        <!-- LEFT VERTICAL NAVIGATION RAIL -->
+        <nav id="cg-left-nav">
+            <a href="#" class="nav-item" data-nav="global-view">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                <span>Global View</span>
+            </a>
+
+            <a href="#" class="nav-item active" data-nav="live-tracking">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8"></circle><line x1="12" y1="2" x2="12" y2="4"></line><line x1="12" y1="20" x2="12" y2="22"></line><line x1="20" y1="12" x2="22" y2="12"></line><line x1="2" y1="12" x2="4" y2="12"></line></svg>
+                <span>Live Tracking</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="regional-analysis">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                <span>Regional Analysis</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="forecast-models">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+                <span>Forecast & Models</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="impact-assessment">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                <span>Impact Assessment</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="what-if">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+                <span>What-If Simulation</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="emergency-planning">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                <span>Emergency Planning</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="ai-assistant">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8.01" y2="16"></line><line x1="16" y1="16" x2="16.01" y2="16"></line></svg>
+                <span>AI Assistant</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="alerts">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <span>Alerts & Notices</span>
+                <span class="nav-badge-pill">5</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="reports">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <span>Reports</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="data-sources">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+                <span>Data Sources</span>
+            </a>
+
+            <a href="#" class="nav-item" data-nav="settings">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <span>Settings</span>
+            </a>
+        </nav>
+
+        <!-- CENTER 3D GLOBE PANE (CESIUM) -->
+        <main id="globe-center-pane">
+            <div id="cesiumContainer"></div>
+
+            <!-- Floating Active Cyclones List on Map (Top-Left) -->
+            <div id="floating-active-cyclones-card" class="glass-panel">
+                <div class="fac-header">
+                    <span class="fac-title">Active Cyclones (3)</span>
+                    <span class="fac-view-all" onclick="app.globe.resetView()">View All &rsaquo;</span>
+                </div>
+                <div class="fac-list" id="floatingStormsList">
+                    <!-- Dynamic Active Storms populated by app.js -->
+                </div>
+            </div>
+
+            <!-- Wind Speed Legend Box (Bottom-Left) -->
+            <div id="map-wind-legend" class="glass-panel">
+                <div class="legend-title">Wind Speed (km/h)</div>
+                <div class="legend-scale-row"><span class="legend-color-bar" style="background: #a855f7;"></span> &ge; 200</div>
+                <div class="legend-scale-row"><span class="legend-color-bar" style="background: #ef4444;"></span> 150 - 200</div>
+                <div class="legend-scale-row"><span class="legend-color-bar" style="background: #f59e0b;"></span> 100 - 150</div>
+                <div class="legend-scale-row"><span class="legend-color-bar" style="background: #10b981;"></span> 60 - 100</div>
+                <div class="legend-scale-row"><span class="legend-color-bar" style="background: #eab308;"></span> 30 - 60</div>
+                <div class="legend-scale-row"><span class="legend-color-bar" style="background: #38bdf8;"></span> &lt; 30</div>
+            </div>
+
+            <!-- Floating Map Navigation Tools (Right) -->
+            <div id="floating-globe-controls">
+                <button class="globe-tool-btn" id="btnCompass" title="North orientation">N</button>
+                <button class="globe-tool-btn" id="btnZoomIn" title="Zoom In">+</button>
+                <button class="globe-tool-btn" id="btnZoomOut" title="Zoom Out">&minus;</button>
+                <button class="globe-tool-btn" id="btnResetView" title="Re-center View">&#9678;</button>
+                <button class="globe-tool-btn" id="btnLayers" title="Toggle Basemap" onclick="app.globe.setBasemap(app.globe.currentLayer === 'dark' ? 'satellite' : 'dark')">&#9776;</button>
+                <button class="globe-tool-btn" id="btnToggle3D" title="3D / 2D Perspective">3D</button>
+            </div>
+        </main>
+
+        <!-- RIGHT STORM DETAIL INTELLIGENCE PANEL -->
+        <aside id="cg-right-panel">
+            <div class="right-panel-header">
+                <div class="rph-title-wrap">
+                    <span style="color: #ef4444; font-size: 18px;">🌀</span>
+                    <span class="rph-storm-name" id="rightStormName">Cyclone REMAL</span>
+                    <span class="cat-pill cat3" id="rightStormCatBadge">Category 3 (Severe)</span>
+                </div>
+                <div class="rph-actions">
+                    <button class="follow-btn" id="followStormBtn">+ Follow</button>
+                    <button style="background: transparent; border: none; color: #64748b; font-size: 16px; cursor: pointer;">•••</button>
+                </div>
+            </div>
+
+            <!-- Navigation Tabs Bar -->
+            <div class="right-tabs-bar">
+                <button class="rtab-btn active" data-tab="overview">Overview</button>
+                <button class="rtab-btn" data-tab="forecast">Forecast Track</button>
+                <button class="rtab-btn" data-tab="impact">Impact Zones</button>
+                <button class="rtab-btn" data-tab="satellite">Satellite</button>
+                <button class="rtab-btn" data-tab="models">Models</button>
+                <button class="rtab-btn" data-tab="advisories">Advisories</button>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="right-panel-body">
+                <!-- TAB 1: OVERVIEW (Default matching reference design) -->
+                <div class="rtab-panel active" id="rtab-panel-overview">
+                    <!-- Eyewall Doppler Radar Live Animated Preview Canvas -->
+                    <div class="eyewall-radar-box">
+                        <canvas id="eyewallRadarCanvas"></canvas>
+                        <span class="eyewall-tag">EYEWALL DOPPLER RADAR REFLECTIVITY</span>
+                    </div>
+
+                    <!-- Key Telemetry Grid -->
+                    <div class="telemetry-grid">
+                        <div class="telem-cell">
+                            <span class="label">Wind Speed</span>
+                            <span class="val" id="statWindSpeed">185 km/h</span>
+                        </div>
+                        <div class="telem-cell">
+                            <span class="label">Central Pressure</span>
+                            <span class="val" id="statCentralPressure">950 hPa</span>
+                        </div>
+                        <div class="telem-cell">
+                            <span class="label">Movement</span>
+                            <span class="val" id="statMovement">NW at 15 km/h</span>
+                        </div>
+                        <div class="telem-cell">
+                            <span class="label">Distance to Coast</span>
+                            <span class="val" id="statDistanceCoast">350 km</span>
+                        </div>
+                        <div class="telem-cell">
+                            <span class="label">Landfall (Expected)</span>
+                            <span class="val" id="statLandfall">18 Oct, 06:00 AM</span>
+                        </div>
+                        <div class="telem-cell">
+                            <span class="label">Category (IMD)</span>
+                            <span class="val highlight-red" id="statCategoryIMD">Category 3 (Severe)</span>
+                        </div>
+                    </div>
+
+                    <!-- Last Observation info bar -->
+                    <div class="observation-source-bar">
+                        <span>ℹ️ Last Observation: 17 Oct 2025, 10:30 AM IST</span>
+                        <span>Source: IMD · NOAA · ECMWF</span>
+                    </div>
+
+                    <!-- Track Confidence & Uncertainty Box -->
+                    <div class="confidence-box">
+                        <div class="confidence-header">
+                            <span class="confidence-title">Track Confidence & Uncertainty</span>
+                            <div class="confidence-legend-row">
+                                <span style="display: flex; align-items: center; gap: 3px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #ef4444;"></span> Observed</span>
+                                <span style="display: flex; align-items: center; gap: 3px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #f59e0b;"></span> Forecast</span>
+                                <span style="display: flex; align-items: center; gap: 3px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #38bdf8;"></span> Cone</span>
+                            </div>
+                        </div>
+
+                        <div class="conf-graphic-row">
+                            <!-- Cone path SVG graphic -->
+                            <div style="flex: 1; height: 50px; display: flex; align-items: center;">
+                                <svg width="100%" height="45" viewBox="0 0 200 45">
+                                    <path d="M 15 22 Q 100 12, 185 2 Q 100 32, 15 22 Z" fill="rgba(0, 210, 255, 0.15)" stroke="rgba(0, 210, 255, 0.4)" stroke-dasharray="3,3" />
+                                    <path d="M 15 22 Q 100 20, 185 18" fill="none" stroke="#ef4444" stroke-width="2.5" />
+                                    <circle cx="15" cy="22" r="5" fill="#ef4444" stroke="#fff" stroke-width="1.5" />
+                                    <circle cx="50" cy="21" r="3.5" fill="#ef4444" />
+                                    <circle cx="90" cy="20" r="3.5" fill="#f59e0b" />
+                                    <circle cx="130" cy="19" r="3.5" fill="#f59e0b" />
+                                    <circle cx="170" cy="18" r="3.5" fill="#10b981" />
+                                </svg>
+                            </div>
+
+                            <!-- Donut Confidence Gauge -->
+                            <div class="confidence-gauge-wrap">
+                                <canvas id="confidenceGaugeCanvas"></canvas>
+                                <div class="confidence-gauge-val">
+                                    78%
+                                    <span>Track Conf.</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Footer KPI Row -->
+                        <div class="confidence-kpi-footer">
+                            <div class="conf-footer-cell">
+                                <span class="lbl">Max Wind (1-min)</span>
+                                <span class="val" id="kpiMaxWind">185 km/h</span>
+                            </div>
+                            <div class="conf-footer-cell">
+                                <span class="lbl">Min Pressure</span>
+                                <span class="val" id="kpiMinPressure">950 hPa</span>
+                            </div>
+                            <div class="conf-footer-cell">
+                                <span class="lbl">Storm Radius</span>
+                                <span class="val" id="kpiStormRadius">280 km</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: FORECAST TRACK -->
+                <div class="rtab-panel" id="rtab-panel-forecast">
+                    <div class="confidence-box">
+                        <div class="confidence-title">Multi-Horizon Track Waypoints</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin: 4px 0 10px;">Deterministic physics-informed trajectory & radius of maximum winds (RMW)</div>
+                        <table class="impact-table">
+                            <thead>
+                                <tr><th>Horizon</th><th>Coordinates</th><th>Wind</th><th>Pressure</th><th>Radius</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="color: #ef4444; font-weight:700;">+00h (Now)</td><td>17.8°N, 88.4°E</td><td>185 km/h</td><td>950 hPa</td><td>280 km</td></tr>
+                                <tr><td style="color: #f59e0b; font-weight:700;">+12h</td><td>18.6°N, 87.7°E</td><td>195 km/h</td><td>944 hPa</td><td>295 km</td></tr>
+                                <tr><td style="color: #f59e0b; font-weight:700;">+24h (Landfall)</td><td>19.5°N, 87.0°E</td><td>180 km/h</td><td>952 hPa</td><td>310 km</td></tr>
+                                <tr><td style="color: #10b981; font-weight:700;">+36h</td><td>20.4°N, 86.4°E</td><td>140 km/h</td><td>968 hPa</td><td>260 km</td></tr>
+                                <tr><td style="color: #38bdf8; font-weight:700;">+48h</td><td>21.3°N, 86.0°E</td><td>95 km/h</td><td>985 hPa</td><td>220 km</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="confidence-box" style="margin-top: 10px;">
+                        <div class="confidence-title">Steering Environmental Flow</div>
+                        <div style="font-size: 11px; color: #cbd5e1; line-height: 1.5; margin-top: 6px;">
+                            Subtropical anticyclone ridge over northern Myanmar and eastern India continues to steer the vortex along a North-Northwestward track at 15 km/h. Sea Surface Temperatures (SST) remain elevated at 30.5°C with high Tropical Cyclone Heat Potential (TCHP > 95 kJ/cm²).
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: IMPACT ZONES -->
+                <div class="rtab-panel" id="rtab-panel-impact">
+                    <div class="confidence-box">
+                        <div class="confidence-title" style="color: #ef4444;">🚨 Coastal High-Risk Inundation Zones</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin: 4px 0 10px;">SLOSH & ADCIRC hydrodynamic storm surge inundation models</div>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; border-radius: 6px; padding: 8px 10px;">
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; color: #fff; font-size: 11px;">
+                                    <span>Jagatsinghpur & Kendrapara</span>
+                                    <span style="color: #ef4444;">Surge: 4.2 - 5.1 m</span>
+                                </div>
+                                <div style="font-size: 9.5px; color: #fca5a5; margin-top: 2px;">Extreme coastal inundation extending up to 6.5 km inland. Complete low-lying evacuation mandated.</div>
+                            </div>
+                            <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; border-radius: 6px; padding: 8px 10px;">
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; color: #fff; font-size: 11px;">
+                                    <span>Puri & Chilika Lagoon</span>
+                                    <span style="color: #f59e0b;">Surge: 3.2 - 3.8 m</span>
+                                </div>
+                                <div style="font-size: 9.5px; color: #fde68a; margin-top: 2px;">High tidal breach potential. Fishermen boats hauled inland; coastal highway waterlogged.</div>
+                            </div>
+                            <div style="background: rgba(0, 210, 255, 0.15); border: 1px solid #00d2ff; border-radius: 6px; padding: 8px 10px;">
+                                <div style="display: flex; justify-content: space-between; font-weight: 700; color: #fff; font-size: 11px;">
+                                    <span>Balasore & Digha</span>
+                                    <span style="color: #00d2ff;">Surge: 2.5 - 3.2 m</span>
+                                </div>
+                                <div style="font-size: 9.5px; color: #bae6fd; margin-top: 2px;">Heavy gale gusts up to 125 km/h. High sea swell warning active.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: SATELLITE -->
+                <div class="rtab-panel" id="rtab-panel-satellite">
+                    <div class="confidence-box">
+                        <div class="confidence-title">INSAT-3DR Rapid-Scan Thermal IR (10.8 µm)</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin: 4px 0 10px;">CDO Eyewall Architecture & Cloud-Top Brightness Temperature</div>
+                        <div style="background: #020617; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; height: 160px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <canvas id="satelliteIRCanvas" width="340" height="160" style="width: 100%; height: 100%;"></canvas>
+                            <span style="position: absolute; bottom: 6px; right: 8px; font-size: 9px; color: #38bdf8; background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 3px;">BT: -82.4°C</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; font-size: 10px;">
+                            <div style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 4px;">
+                                <span style="color: #64748b;">Eye Diameter:</span> <strong style="color: #fff;">28 km (Ragged)</strong>
+                            </div>
+                            <div style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 4px;">
+                                <span style="color: #64748b;">Dvorak T-Number:</span> <strong style="color: #ef4444;">T 5.5</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: MODELS -->
+                <div class="rtab-panel" id="rtab-panel-models">
+                    <div class="confidence-box">
+                        <div class="confidence-title">Ensemble Consensus & Multi-Model Spread</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin: 4px 0 10px;">Comparison of 5 major global NWP cyclogenesis models</div>
+                        <table class="impact-table">
+                            <thead>
+                                <tr><th>Model Agency</th><th>Landfall Target</th><th>Intensity</th><th>Spread</th></tr>
+                            </thead>
+                            <tbody>
+                                <tr><td style="font-weight:700; color:#fff;">IMD GFS</td><td>Puri - Paradip</td><td>185 km/h</td><td>±15 km</td></tr>
+                                <tr><td style="font-weight:700; color:#38bdf8;">ECMWF HRES</td><td>Paradip Coast</td><td>190 km/h</td><td>±20 km</td></tr>
+                                <tr><td style="font-weight:700; color:#f59e0b;">UKMO Unified</td><td>Kendrapara Coast</td><td>175 km/h</td><td>±28 km</td></tr>
+                                <tr><td style="font-weight:700; color:#10b981;">NCEP HWRF</td><td>Puri South</td><td>195 km/h</td><td>±35 km</td></tr>
+                                <tr><td style="font-weight:700; color:#a855f7;">AI-Ensemble</td><td>Jagatsinghpur</td><td>185 km/h</td><td>±12 km</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 6: ADVISORIES -->
+                <div class="rtab-panel" id="rtab-panel-advisories">
+                    <div class="confidence-box">
+                        <div class="confidence-title" style="color: #ef4444;">IMD Special Cyclone Bulletin No. 14</div>
+                        <div style="font-size: 9.5px; color: #94a3b8; margin-top: 2px;">Issued: 17 Oct 2025, 10:00 IST · National Cyclone Warning Centre</div>
+                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 10.5px; color: #e2e8f0; line-height: 1.5;">
+                            <div style="padding: 8px; background: rgba(239,68,68,0.12); border-left: 3px solid #ef4444; border-radius: 0 4px 4px 0;">
+                                <strong style="color: #ef4444;">RED ALERT:</strong> Coastal districts of Puri, Jagatsinghpur, Kendrapara, Bhadrak, and Balasore. Heavy to very heavy rainfall (>200 mm) accompanied by squally winds of 170-185 km/h gusting to 205 km/h.
+                            </div>
+                            <div style="padding: 8px; background: rgba(245,158,11,0.12); border-left: 3px solid #f59e0b; border-radius: 0 4px 4px 0;">
+                                <strong style="color: #f59e0b;">PORTS ADVISORY:</strong> Great Danger Signal No. 10 hoisted at Paradip and Dhamra Ports. Great Danger Signal No. 9 hoisted at Gopalpur Port.
+                            </div>
+                            <div style="padding: 8px; background: rgba(16,185,129,0.12); border-left: 3px solid #10b981; border-radius: 0 4px 4px 0;">
+                                <strong style="color: #10b981;">NDRF & CIVIL DEFENCE:</strong> 34 NDRF battalions and 60 ODRAF teams deployed in vulnerable coastal blocks with satellite communication sets.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- 3. BOTTOM INTERACTIVE SHELF -->
+    <footer id="cg-bottom-shelf">
+
+        <!-- CARD 1: Cyclone Track Timeline -->
+        <div class="shelf-card">
+            <div class="shelf-card-header">
+                <div>
+                    <div class="shelf-title">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Cyclone Track Timeline
+                    </div>
+                    <div class="shelf-subtitle">Historical path and forecast (UTC+5:30)</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; font-size: 9.5px; color: #64748b;">
+                    <span style="display: flex; align-items: center; gap: 3px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #ef4444;"></span> Observed</span>
+                    <span style="display: flex; align-items: center; gap: 3px;"><span style="width: 5px; height: 5px; border-radius: 50%; background: #f59e0b;"></span> Forecast</span>
+                    <span style="color: #0284c7;">1x ▾</span>
+                </div>
+            </div>
+
+            <!-- Scrubber Track & Play Button -->
+            <div class="timeline-controls-row">
+                <button class="play-pause-btn" id="timelinePlayBtn">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </button>
+                <div class="timeline-scrubber-track" id="timelineScrubberTrack">
+                    <div class="timeline-scrubber-progress" id="timelineProgress"></div>
+                    <div class="timeline-now-handle" id="timelineNowHandle">Now</div>
+                </div>
+            </div>
+
+            <div class="timeline-steps-labels">
+                <span>15 Oct 12:00</span>
+                <span>16 Oct 12:00</span>
+                <span style="color: #38bdf8; font-weight: 700;">17 Oct 12:00</span>
+                <span>18 Oct 12:00</span>
+                <span>19 Oct 12:00</span>
+                <span>20 Oct 12:00</span>
+                <span>21 Oct 12:00</span>
+            </div>
+
+            <!-- Satellite Thumbnails Strip -->
+            <div class="timeline-thumbnails-strip">
+                <div class="sat-thumb-box" data-step="0">
+                    <canvas class="sat-thumb-canvas" width="48" height="46"></canvas>
+                    <span class="sat-thumb-label">15 Oct</span>
+                </div>
+                <div class="sat-thumb-box" data-step="1">
+                    <canvas class="sat-thumb-canvas" width="48" height="46"></canvas>
+                    <span class="sat-thumb-label">16 Oct</span>
+                </div>
+                <div class="sat-thumb-box active" data-step="2">
+                    <canvas class="sat-thumb-canvas" width="48" height="46"></canvas>
+                    <span class="sat-thumb-label">17 Oct</span>
+                </div>
+                <div class="sat-thumb-box" data-step="3">
+                    <canvas class="sat-thumb-canvas" width="48" height="46"></canvas>
+                    <span class="sat-thumb-label">18 Oct</span>
+                </div>
+                <div class="sat-thumb-box" data-step="4">
+                    <canvas class="sat-thumb-canvas" width="48" height="46"></canvas>
+                    <span class="sat-thumb-label">19 Oct</span>
+                </div>
+                <div class="sat-thumb-box" data-step="5">
+                    <canvas class="sat-thumb-canvas" width="48" height="46"></canvas>
+                    <span class="sat-thumb-label">20 Oct</span>
+                </div>
+                <div class="sat-thumb-box" data-step="6">
+                    <canvas class="sat-thumb-canvas" width="48" height="46"></canvas>
+                    <span class="sat-thumb-label">21 Oct</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARD 2: Intensity Forecast Chart -->
+        <div class="shelf-card">
+            <div class="shelf-card-header">
+                <div class="shelf-title">Intensity Forecast</div>
+                <div class="intensity-tabs">
+                    <button class="it-btn active" data-metric="wind">🌀 Wind Speed</button>
+                    <button class="it-btn" data-metric="pressure">⏱ Pressure</button>
+                    <button class="it-btn" data-metric="rain">🌧 Rainfall</button>
+                </div>
+            </div>
+            <div class="intensity-chart-wrap">
+                <canvas id="intensityChartCanvas"></canvas>
+            </div>
+        </div>
+
+        <!-- CARD 3: Key Locations Along Track Impact Table -->
+        <div class="shelf-card">
+            <div class="shelf-card-header">
+                <div class="shelf-title">Key Locations Along Track</div>
+                <span class="fac-view-all" onclick="app.globe.flyToCoordinates(20.2, 86.2, 1400000.0)">View on Map &rsaquo;</span>
+            </div>
+            <div class="impact-table-wrap">
+                <table class="impact-table">
+                    <thead>
+                        <tr>
+                            <th>Location</th>
+                            <th>ETA (IST)</th>
+                            <th>Risk Level</th>
+                            <th>Max Wind</th>
+                            <th>Expected Rain</th>
+                        </tr>
+                    </thead>
+                    <tbody id="keyLocationsTableBody">
+                        <!-- Populated by app.js -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </footer>
+
+    <!-- 4. SLIDEOVER AI ASSISTANT CHAT DRAWER -->
+    <div id="ai-assistant-drawer" class="glass-panel">
+        <div class="chat-header">
+            <div class="chat-title">
+                <span>🤖</span> CycloneGuard AI Assistant
+            </div>
+            <button style="background:transparent; border:none; color:#64748b; font-size:16px; cursor:pointer;" id="closeAiChatBtn">&times;</button>
+        </div>
+        <div class="chat-messages-container" id="chatMessages">
+            <div class="chat-msg bot">
+                👋 Hello! I am CycloneGuard AI. How can I assist your disaster planning? You can ask me:
+                <div style="margin-top: 6px; font-size: 10px; color: #38bdf8;">
+                    • "When is REMAL expected to make landfall?"<br>
+                    • "What shelters are available in Puri?"<br>
+                    • "Which districts have extreme rainfall warnings?"
+                </div>
+            </div>
+        </div>
+        <div class="chat-input-bar">
+            <input type="text" id="chatInput" placeholder="Ask a geospatial question...">
+            <button class="chat-send-btn" id="chatSendBtn">Send</button>
+        </div>
+    </div>
+
+    <!-- 5. EMERGENCY SHELTER MANAGEMENT MODAL -->
+    <div class="cg-modal-backdrop" id="sheltersModal">
+        <div class="cg-modal-box glass-panel">
+            <div class="cg-modal-header">
+                <h3>Emergency Planning & Cyclone Shelter Management</h3>
+                <button class="close-modal-trigger" style="background:transparent; border:none; color:#94a3b8; font-size:18px; cursor:pointer;">&times;</button>
+            </div>
+            <div class="cg-modal-body">
+                <!-- KPI Counters -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px;">
+                    <div style="background: rgba(6,14,28,0.8); border: 1px solid var(--border-subtle); padding: 12px; border-radius: 8px;">
+                        <div style="font-size: 10px; color: #94a3b8;">Total Shelter Capacity</div>
+                        <div style="font-size: 20px; font-weight: 800; color: #fff; margin-top: 4px;" id="shTotalCapacity">2,180</div>
+                    </div>
+                    <div style="background: rgba(6,14,28,0.8); border: 1px solid var(--border-subtle); padding: 12px; border-radius: 8px;">
+                        <div style="font-size: 10px; color: #94a3b8;">Current Occupancy</div>
+                        <div style="font-size: 20px; font-weight: 800; color: #f59e0b; margin-top: 4px;" id="shOccupancy">550</div>
+                    </div>
+                    <div style="background: rgba(6,14,28,0.8); border: 1px solid var(--border-subtle); padding: 12px; border-radius: 8px;">
+                        <div style="font-size: 10px; color: #94a3b8;">Available Space</div>
+                        <div style="font-size: 20px; font-weight: 800; color: #10b981; margin-top: 4px;" id="shAvailable">1,630</div>
+                    </div>
+                </div>
+
+                <!-- Shelters Table -->
+                <table class="impact-table">
+                    <thead>
+                        <tr>
+                            <th>Shelter Facility</th>
+                            <th>Total Capacity</th>
+                            <th>Occupancy</th>
+                            <th>Available</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="sheltersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. WHAT-IF STORM SURGE SIMULATION MODAL -->
+    <div class="cg-modal-backdrop" id="simulationModal">
+        <div class="cg-modal-box glass-panel">
+            <div class="cg-modal-header">
+                <h3>What-If Simulation: Storm Surge Inundation & Demographics</h3>
+                <button class="close-modal-trigger" style="background:transparent; border:none; color:#94a3b8; font-size:18px; cursor:pointer;">&times;</button>
+            </div>
+            <div class="cg-modal-body">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                    <div>
+                        <label style="font-size: 11px; color: #94a3b8;">Wind Speed Adjustment (%): <span id="simWindVal" style="color: #00d2ff; font-weight: 700;">+0%</span></label>
+                        <input type="range" id="simWindSlider" min="-25" max="35" value="0" style="width: 100%; margin-top: 6px;">
+                    </div>
+                    <div>
+                        <label style="font-size: 11px; color: #94a3b8;">Astronomical Tide Offset: <span id="simTideVal" style="color: #f59e0b; font-weight: 700;">+0 m</span></label>
+                        <input type="range" id="simTideSlider" min="0" max="3" step="0.5" value="0" style="width: 100%; margin-top: 6px;">
+                    </div>
+                </div>
+
+                <!-- Simulation Output Cards -->
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px;">
+                    <div style="background: rgba(6,14,28,0.8); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 8px;">
+                        <div style="font-size: 10px; color: #94a3b8;">Projected Surge</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #ef4444; margin-top: 4px;" id="simSurgeDepth">3.8 m</div>
+                    </div>
+                    <div style="background: rgba(6,14,28,0.8); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 8px;">
+                        <div style="font-size: 10px; color: #94a3b8;">Pop. Exposed</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #fff; margin-top: 4px;" id="simPopExposed">12.4 M</div>
+                    </div>
+                    <div style="background: rgba(6,14,28,0.8); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 8px;">
+                        <div style="font-size: 10px; color: #94a3b8;">Housing Units</div>
+                        <div style="font-size: 18px; font-weight: 800; color: #f59e0b; margin-top: 4px;" id="simHousesExposed">2,718 k</div>
+                    </div>
+                    <div style="background: rgba(6,14,28,0.8); border: 1px solid var(--border-subtle); padding: 10px; border-radius: 8px;">
+                        <div style="font-size: 10px; color: #94a3b8;">Risk Tier</div>
+                        <div style="font-size: 15px; font-weight: 800; color: #ef4444; margin-top: 6px;" id="simRiskTier">CRITICAL</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. "WATCH MY PLACE" TELEGRAM ALERTS MODAL -->
+    <div class="cg-modal-backdrop" id="wmpModal">
+        <div class="cg-modal-box glass-panel">
+            <div class="cg-modal-header">
+                <h3>Watch My Place — Community Push Alerts & Telegram Bot</h3>
+                <button class="close-modal-trigger" style="background:transparent; border:none; color:#94a3b8; font-size:18px; cursor:pointer;">&times;</button>
+            </div>
+            <div class="cg-modal-body">
+                <p style="font-size: 11.5px; color: #94a3b8; margin-bottom: 14px;">
+                    Register your coastal station or village. The background daemon checks storm proximity every 15 minutes and pushes alerts to your Telegram chat.
+                </p>
+                <div style="display: flex; gap: 10px; margin-bottom: 16px;">
+                    <button type="button" class="it-btn active" style="padding: 8px 14px; font-size: 11px;" id="wmpTestTriggerBtn">
+                        ⚡ Send Immediate Test Push Alert
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. ML ENGINE & HARDWARE ARCHITECTURE MODAL -->
+    <div class="cg-modal-backdrop" id="mlBenchmarkModal">
+        <div class="cg-modal-box glass-panel">
+            <div class="cg-modal-header">
+                <h3>Machine Learning Engine & Hardware Architecture</h3>
+                <button class="close-modal-trigger" style="background:transparent; border:none; color:#94a3b8; font-size:18px; cursor:pointer;">&times;</button>
+            </div>
+            <div class="cg-modal-body">
+                <table class="impact-table" style="margin-bottom: 16px;">
+                    <thead>
+                        <tr>
+                            <th>Horizon</th>
+                            <th>Baseline 1 (Persistence)</th>
+                            <th>Baseline 2 (Constant-Motion)</th>
+                            <th>ML Model (Ridge + GBM)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>+6h</td><td>151.7 km / 4.5 kt</td><td>5.4 km / 3.5 kt</td><td style="color:#10b981; font-weight:700;">3.9 km / 3.1 kt</td></tr>
+                        <tr><td>+12h</td><td>303.5 km / 8.2 kt</td><td>16.4 km / 6.0 kt</td><td style="color:#10b981; font-weight:700;">10.9 km / 5.1 kt</td></tr>
+                        <tr><td>+18h</td><td>455.4 km / 11.5 kt</td><td>33.6 km / 8.6 kt</td><td style="color:#10b981; font-weight:700;">21.1 km / 7.1 kt</td></tr>
+                        <tr><td>+24h</td><td>607.1 km / 14.4 kt</td><td>57.2 km / 11.1 kt</td><td style="color:#10b981; font-weight:700;">34.1 km / 9.2 kt</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- CesiumJS Library -->
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.119/Build/Cesium/Cesium.js"></script>
+
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- CycloneGuard Application Modules -->
+    <script src="/static/js/i18n.js"></script>
+    <script src="/static/js/globe.js"></script>
+    <script src="/static/js/charts.js"></script>
+    <script src="/static/js/app.js"></script>
+
+    <!-- Thumbnail generator script for timeline -->
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll(".sat-thumb-canvas").forEach((canvas, idx) => {
+                const ctx = canvas.getContext("2d");
+                ctx.fillStyle = "#020712";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath();
+                ctx.arc(24, 23, 8 + idx * 2.2, 0, Math.PI * 2);
+                ctx.fillStyle = idx >= 2 ? "rgba(239, 68, 68, 0.7)" : "rgba(56, 189, 248, 0.6)";
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(24, 23, 2, 0, Math.PI * 2);
+                ctx.fillStyle = "#fff";
+                ctx.fill();
+            });
+        });
+    </script>
+</body>
+</html>

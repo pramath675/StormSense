@@ -1,0 +1,1246 @@
+/*
+ * CycloneGuard AI: Real-Time Cyclone Risk Intelligence
+ * High-Performance Mission-Control Interface & Glassmorphism Design System
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap');
+
+:root {
+    --bg-base: #030712;
+    --bg-header: rgba(5, 12, 26, 0.92);
+    --bg-panel: rgba(8, 17, 36, 0.82);
+    --bg-panel-hover: rgba(12, 24, 48, 0.92);
+    --bg-card: rgba(11, 22, 44, 0.75);
+    --bg-card-inner: rgba(6, 14, 28, 0.70);
+
+    --border-subtle: rgba(30, 58, 98, 0.40);
+    --border-bright: rgba(0, 210, 255, 0.45);
+    --border-highlight: rgba(56, 189, 248, 0.35);
+
+    --cyan-primary: #00d2ff;
+    --cyan-glow: rgba(0, 210, 255, 0.35);
+    --blue-accent: #0284c7;
+    --blue-active: #2563eb;
+    --blue-glow: rgba(37, 99, 235, 0.40);
+    --emerald-safe: #10b981;
+    --amber-warning: #f59e0b;
+    --red-danger: #ef4444;
+    --red-glow: rgba(239, 68, 68, 0.45);
+    --purple-cat5: #a855f7;
+
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+
+    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-pill: 9999px;
+
+    --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-base);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+}
+
+/* Glassmorphism Classes */
+.glass-panel {
+    background: var(--bg-panel);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-subtle);
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.7);
+}
+
+.glass-card {
+    background: var(--bg-card);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    transition: var(--transition);
+}
+
+.glass-card:hover {
+    border-color: var(--border-bright);
+    background: var(--bg-panel-hover);
+    box-shadow: 0 0 15px var(--cyan-glow);
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+::-webkit-scrollbar-track {
+    background: rgba(3, 7, 18, 0.6);
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 210, 255, 0.25);
+    border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--cyan-primary);
+}
+
+/* ==============================================================================
+   1. TOP HEADER BAR
+   ============================================================================== */
+#cg-header {
+    height: 60px;
+    min-height: 60px;
+    background: var(--bg-header);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    z-index: 100;
+    position: relative;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+}
+
+.cyclone-logo-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(0, 210, 255, 0.2), rgba(2, 132, 199, 0.3));
+    border: 1px solid var(--cyan-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cyan-primary);
+    box-shadow: 0 0 12px var(--cyan-glow);
+    animation: rotate-logo 20s linear infinite;
+}
+
+@keyframes rotate-logo {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.brand-text-block {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-title {
+    font-family: var(--font-heading);
+    font-size: 17px;
+    font-weight: 800;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.1;
+}
+
+.brand-title .ai-tag {
+    color: var(--cyan-primary);
+    font-weight: 800;
+    text-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.brand-subtitle {
+    font-size: 10px;
+    color: var(--cyan-primary);
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.brand-motto {
+    font-size: 9px;
+    color: var(--text-muted);
+    letter-spacing: 0.6px;
+}
+
+/* Header Search Input */
+.header-search-wrap {
+    width: 380px;
+    position: relative;
+    margin: 0 20px;
+}
+
+.header-search-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+.header-search-input {
+    width: 100%;
+    background: rgba(6, 14, 28, 0.85);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-pill);
+    padding: 7px 12px 7px 34px;
+    color: #ffffff;
+    font-size: 12px;
+    outline: none;
+    transition: var(--transition);
+}
+
+.header-search-input:focus {
+    border-color: var(--cyan-primary);
+    box-shadow: 0 0 12px var(--cyan-glow);
+}
+
+.header-search-input::placeholder {
+    color: var(--text-muted);
+    font-size: 11.5px;
+}
+
+/* Header Right: Clock & Top KPI Chips */
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.clock-live-block {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-right: 12px;
+    border-right: 1px solid var(--border-subtle);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: #e2e8f0;
+}
+
+.live-pill {
+    background: var(--red-danger);
+    color: #ffffff;
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+    box-shadow: 0 0 8px var(--red-glow);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    animation: live-pulse 2s infinite ease-in-out;
+}
+
+@keyframes live-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.75; transform: scale(0.97); }
+}
+
+.header-kpi-chips {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.kpi-stat-box {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(8, 17, 34, 0.7);
+    border: 1px solid var(--border-subtle);
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+}
+
+.kpi-stat-box .kpi-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.kpi-stat-box .kpi-value {
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: #ffffff;
+}
+
+/* Multi-language Selector */
+.header-lang-switch {
+    display: flex;
+    background: rgba(6, 14, 28, 0.8);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+}
+
+.header-lang-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.header-lang-btn.active {
+    background: var(--cyan-primary);
+    color: #030712;
+}
+
+/* ==============================================================================
+   2. MAIN WORKSPACE CONTAINER
+   ============================================================================== */
+#cg-workspace {
+    flex: 1;
+    display: flex;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ==============================================================================
+   3. LEFT VERTICAL NAVIGATION RAIL
+   ============================================================================== */
+#cg-left-nav {
+    width: 175px;
+    min-width: 175px;
+    background: rgba(5, 12, 26, 0.88);
+    backdrop-filter: blur(14px);
+    border-right: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    padding: 10px 8px;
+    z-index: 60;
+    overflow-y: auto;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 2px;
+    transition: var(--transition);
+    text-decoration: none;
+    position: relative;
+}
+
+.nav-item svg {
+    color: var(--text-muted);
+    transition: var(--transition);
+}
+
+.nav-item:hover {
+    background: rgba(14, 26, 50, 0.7);
+    color: #ffffff;
+}
+
+.nav-item:hover svg {
+    color: var(--cyan-primary);
+}
+
+.nav-item.active {
+    background: var(--blue-active);
+    color: #ffffff;
+    font-weight: 600;
+    box-shadow: 0 0 14px var(--blue-glow);
+}
+
+.nav-item.active svg {
+    color: #ffffff;
+}
+
+.nav-badge-pill {
+    margin-left: auto;
+    background: var(--red-danger);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 9999px;
+}
+
+/* ==============================================================================
+   4. CENTER 3D GLOBE PANE (CESIUM)
+   ============================================================================== */
+#globe-center-pane {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+#cesiumContainer {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Active Cyclones Floating Card on Globe (Top-Left) */
+#floating-active-cyclones-card {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    width: 250px;
+    z-index: 40;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.fac-header {
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.fac-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.fac-view-all {
+    font-size: 10.5px;
+    color: var(--cyan-primary);
+    cursor: pointer;
+}
+
+.fac-list {
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fac-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: rgba(6, 14, 28, 0.75);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.fac-item:hover, .fac-item.active-storm {
+    border-color: var(--cyan-primary);
+    background: rgba(12, 26, 52, 0.9);
+    box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+.fac-storm-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.storm-swirl-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.storm-swirl-icon.red { background: rgba(239, 68, 68, 0.2); color: var(--red-danger); border: 1px solid var(--red-danger); }
+.storm-swirl-icon.amber { background: rgba(245, 158, 11, 0.2); color: var(--amber-warning); border: 1px solid var(--amber-warning); }
+.storm-swirl-icon.cyan { background: rgba(0, 210, 255, 0.2); color: var(--cyan-primary); border: 1px solid var(--cyan-primary); }
+
+.fac-storm-name {
+    font-weight: 700;
+    font-size: 12px;
+    color: #ffffff;
+}
+
+.fac-storm-telemetry {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.cat-pill {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: var(--font-mono);
+}
+
+.cat-pill.cat3 { background: rgba(239, 68, 68, 0.25); color: #fca5a5; border: 1px solid var(--red-danger); }
+.cat-pill.cat2 { background: rgba(245, 158, 11, 0.25); color: #fde68a; border: 1px solid var(--amber-warning); }
+.cat-pill.cat1 { background: rgba(0, 210, 255, 0.25); color: #bae6fd; border: 1px solid var(--cyan-primary); }
+
+/* Wind Speed Legend Card (Bottom-Left on Globe) */
+#map-wind-legend {
+    position: absolute;
+    bottom: 240px;
+    left: 14px;
+    width: 145px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    z-index: 40;
+}
+
+.legend-title {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-bottom: 6px;
+}
+
+.legend-scale-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 3px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+}
+
+.legend-color-bar {
+    width: 14px;
+    height: 7px;
+    border-radius: 2px;
+}
+
+/* Floating Globe Map Controls (Right Side on Globe) */
+#floating-globe-controls {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    z-index: 40;
+}
+
+.globe-tool-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: rgba(8, 17, 34, 0.85);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    transition: var(--transition);
+}
+
+.globe-tool-btn:hover {
+    border-color: var(--cyan-primary);
+    color: #ffffff;
+    background: rgba(14, 28, 56, 0.95);
+    box-shadow: 0 0 10px var(--cyan-glow);
+}
+
+/* ==============================================================================
+   5. RIGHT STORM DETAIL INTELLIGENCE PANEL
+   ============================================================================== */
+#cg-right-panel {
+    width: 380px;
+    min-width: 380px;
+    background: rgba(5, 12, 26, 0.90);
+    backdrop-filter: blur(16px);
+    border-left: 1px solid var(--border-subtle);
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    overflow-y: auto;
+}
+
+.right-panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.rph-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.rph-storm-name {
+    font-family: var(--font-heading);
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.rph-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.follow-btn {
+    background: rgba(2, 132, 199, 0.2);
+    border: 1px solid var(--blue-accent);
+    color: var(--cyan-primary);
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.follow-btn:hover, .follow-btn.following {
+    background: var(--blue-active);
+    color: #ffffff;
+}
+
+/* Right Tabs Bar */
+.right-tabs-bar {
+    display: flex;
+    border-bottom: 1px solid var(--border-subtle);
+    background: rgba(4, 9, 20, 0.6);
+}
+
+.rtab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 8px 2px;
+    text-align: center;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: var(--transition);
+}
+
+.rtab-btn:hover {
+    color: #ffffff;
+}
+
+.rtab-btn.active {
+    color: #ffffff;
+    background: var(--blue-active);
+    border-bottom-color: var(--cyan-primary);
+}
+
+/* Right Panel Scrollable Body */
+.right-panel-body {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rtab-panel {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rtab-panel.active {
+    display: flex;
+}
+
+
+/* Doppler Eyewall Radar Canvas Preview */
+.eyewall-radar-box {
+    position: relative;
+    height: 150px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #020610;
+    border: 1px solid var(--border-subtle);
+}
+
+#eyewallRadarCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.eyewall-tag {
+    position: absolute;
+    bottom: 6px;
+    left: 8px;
+    background: rgba(3, 7, 18, 0.85);
+    border: 1px solid var(--border-subtle);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--cyan-primary);
+}
+
+/* Key Stats Telemetry Grid */
+.telemetry-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    background: rgba(7, 16, 32, 0.6);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.telem-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.telem-cell .label {
+    font-size: 10px;
+    color: var(--text-muted);
+}
+
+.telem-cell .val {
+    font-size: 12.5px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: #ffffff;
+    margin-top: 1px;
+}
+
+.telem-cell .val.highlight-red {
+    color: var(--red-danger);
+}
+
+.observation-source-bar {
+    font-size: 9.5px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 4px;
+}
+
+/* Track Confidence & Uncertainty Box */
+.confidence-box {
+    background: rgba(7, 16, 32, 0.6);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.confidence-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+}
+
+.confidence-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.confidence-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 9.5px;
+    color: var(--text-muted);
+}
+
+.conf-graphic-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 8px 0;
+}
+
+.confidence-gauge-wrap {
+    width: 72px;
+    height: 72px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.confidence-gauge-val {
+    position: absolute;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--cyan-primary);
+    text-align: center;
+    line-height: 1;
+}
+
+.confidence-gauge-val span {
+    font-size: 8px;
+    display: block;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+.confidence-kpi-footer {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 8px;
+    margin-top: 8px;
+}
+
+.conf-footer-cell {
+    display: flex;
+    flex-direction: column;
+}
+
+.conf-footer-cell .lbl {
+    font-size: 9px;
+    color: var(--text-muted);
+}
+
+.conf-footer-cell .val {
+    font-size: 11px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: #ffffff;
+}
+
+/* ==============================================================================
+   6. BOTTOM INTERACTIVE SHELF (TIMELINE, CHARTS, IMPACT TABLE)
+   ============================================================================== */
+#cg-bottom-shelf {
+    height: 220px;
+    min-height: 220px;
+    background: rgba(4, 10, 22, 0.94);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--border-subtle);
+    display: grid;
+    grid-template-columns: 1.25fr 1fr 1.35fr;
+    gap: 10px;
+    padding: 10px 14px;
+    z-index: 70;
+}
+
+.shelf-card {
+    background: rgba(7, 15, 30, 0.75);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.shelf-card-header {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.shelf-title {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.shelf-subtitle {
+    font-size: 9.5px;
+    color: var(--text-muted);
+}
+
+/* Timeline Controls in Card 1 */
+.timeline-controls-row {
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.play-pause-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--blue-active);
+    border: none;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 0 8px var(--blue-glow);
+}
+
+.timeline-scrubber-track {
+    flex: 1;
+    position: relative;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.timeline-scrubber-progress {
+    height: 100%;
+    background: var(--cyan-primary);
+    border-radius: 2px;
+    width: 35%;
+}
+
+.timeline-now-handle {
+    position: absolute;
+    top: -14px;
+    left: 35%;
+    transform: translateX(-50%);
+    background: var(--blue-active);
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    box-shadow: 0 0 6px var(--cyan-primary);
+}
+
+.timeline-steps-labels {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 12px 2px;
+    font-size: 8.5px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+}
+
+.timeline-thumbnails-strip {
+    display: flex;
+    gap: 4px;
+    padding: 4px 12px 8px;
+    overflow-x: auto;
+}
+
+.sat-thumb-box {
+    flex: 1;
+    min-width: 48px;
+    height: 46px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.sat-thumb-box.active, .sat-thumb-box:hover {
+    border-color: var(--cyan-primary);
+    box-shadow: 0 0 8px var(--cyan-glow);
+}
+
+.sat-thumb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.sat-thumb-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    font-size: 7.5px;
+    text-align: center;
+    color: #e2e8f0;
+}
+
+/* Intensity Forecast in Card 2 */
+.intensity-tabs {
+    display: flex;
+    gap: 4px;
+}
+
+.it-btn {
+    border: 1px solid var(--border-subtle);
+    background: rgba(6, 14, 28, 0.8);
+    color: var(--text-muted);
+    font-size: 9.5px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.it-btn.active {
+    background: var(--blue-active);
+    color: #ffffff;
+    border-color: var(--cyan-primary);
+}
+
+.intensity-chart-wrap {
+    flex: 1;
+    padding: 6px 10px;
+    position: relative;
+}
+
+/* Key Locations Along Track Table in Card 3 */
+.impact-table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+}
+
+.impact-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5px;
+}
+
+.impact-table th {
+    background: rgba(5, 12, 24, 0.85);
+    color: var(--text-muted);
+    text-align: left;
+    padding: 5px 8px;
+    border-bottom: 1px solid var(--border-subtle);
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+
+.impact-table td {
+    padding: 5px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-family: var(--font-mono);
+}
+
+.impact-table tr:hover td {
+    background: rgba(0, 210, 255, 0.08);
+    cursor: pointer;
+}
+
+.risk-badge-sm {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 5px;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.risk-badge-sm.critical { background: var(--red-danger); color: #fff; }
+.risk-badge-sm.high { background: var(--amber-warning); color: #000; }
+.risk-badge-sm.moderate { background: rgba(0, 210, 255, 0.25); color: var(--cyan-primary); }
+
+/* ==============================================================================
+   7. INTERACTIVE SLIDEOVER DRAWERS & MODALS
+   ============================================================================== */
+/* AI Assistant Chat Slide-Over Drawer */
+#ai-assistant-drawer {
+    position: absolute;
+    top: 60px;
+    right: 380px;
+    width: 320px;
+    height: calc(100% - 280px);
+    background: rgba(5, 12, 26, 0.94);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--border-subtle);
+    border-radius: 10px;
+    z-index: 80;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: var(--transition);
+    transform: translateX(450px);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#ai-assistant-drawer.open {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.chat-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.chat-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--cyan-primary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.chat-messages-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.chat-msg {
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.chat-msg.bot {
+    background: rgba(8, 20, 42, 0.85);
+    border: 1px solid var(--border-subtle);
+    color: #e2e8f0;
+    align-self: flex-start;
+}
+
+.chat-msg.user {
+    background: var(--blue-active);
+    color: #ffffff;
+    align-self: flex-end;
+}
+
+.chat-input-bar {
+    padding: 10px;
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    gap: 6px;
+}
+
+.chat-input-bar input {
+    flex: 1;
+    background: rgba(6, 14, 28, 0.8);
+    border: 1px solid var(--border-subtle);
+    border-radius: 6px;
+    color: #ffffff;
+    font-size: 11px;
+    padding: 6px 10px;
+    outline: none;
+}
+
+.chat-send-btn {
+    background: var(--blue-active);
+    border: none;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* Modals */
+.cg-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(2, 6, 14, 0.82);
+    backdrop-filter: blur(14px);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: var(--transition);
+}
+
+.cg-modal-backdrop.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.cg-modal-box {
+    width: 680px;
+    max-width: 92vw;
+    max-height: 85vh;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform: scale(0.95);
+    transition: var(--transition);
+}
+
+.cg-modal-backdrop.open .cg-modal-box {
+    transform: scale(1);
+}
+
+.cg-modal-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.cg-modal-header h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.cg-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+/* Cesium Viewport & Credit Overrides */
+.cesium-viewer-bottom,
+.cesium-credit-logoContainer,
+.cesium-credit-textContainer,
+.cesium-widget-credits,
+.cesium-viewer-toolbar,
+.cesium-viewer-animationContainer,
+.cesium-viewer-timelineContainer,
+.cesium-infoBox {
+    display: none !important;
+}
+

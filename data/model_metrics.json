@@ -1,0 +1,93 @@
+{
+  "generated_at": "2026-10-16T14:04:47.273137+00:00",
+  "hardware": {
+    "machine": "AMD64",
+    "arch_family": "x86_64 / AMD64 (AMD64)",
+    "tier": "High-Performance Workstation / Cloud Compute",
+    "processor": "Intel64 Family 6 Model 186 Stepping 2, GenuineIntel",
+    "system": "Windows",
+    "release": "11",
+    "python_version": "3.14.6",
+    "cpu_cores": 16
+  },
+  "performance": {
+    "latency_ms": 8.357,
+    "throughput_fps": 119.7,
+    "benchmark_iterations": 1000
+  },
+  "training_time_seconds": 23.86,
+  "dataset_statistics": {
+    "total_observations": 6749,
+    "total_storms": 350,
+    "train_samples": 4038,
+    "test_samples": 961
+  },
+  "horizons": [
+    "6h",
+    "12h",
+    "18h",
+    "24h"
+  ],
+  "baselines_comparison": {
+    "persistence": {
+      "track_error_km": {
+        "6h": 151.69,
+        "12h": 303.53,
+        "18h": 455.4,
+        "24h": 607.13
+      },
+      "wind_mae_kt": {
+        "6h": 4.48,
+        "12h": 8.18,
+        "18h": 11.5,
+        "24h": 14.45
+      }
+    },
+    "constant_motion": {
+      "track_error_km": {
+        "6h": 5.37,
+        "12h": 16.45,
+        "18h": 33.6,
+        "24h": 57.2
+      },
+      "wind_mae_kt": {
+        "6h": 3.45,
+        "12h": 6.02,
+        "18h": 8.57,
+        "24h": 11.09
+      }
+    },
+    "ml_model": {
+      "track_error_km": {
+        "6h": 3.86,
+        "12h": 10.89,
+        "18h": 21.05,
+        "24h": 34.1
+      },
+      "wind_mae_kt": {
+        "6h": 3.06,
+        "12h": 5.12,
+        "18h": 7.12,
+        "24h": 9.23
+      }
+    }
+  },
+  "skill_improvements": {
+    "6h_track_skill_%": 97.5,
+    "6h_wind_skill_%": 31.7,
+    "12h_track_skill_%": 96.4,
+    "12h_wind_skill_%": 37.4,
+    "18h_track_skill_%": 95.4,
+    "18h_wind_skill_%": 38.1,
+    "24h_track_skill_%": 94.4,
+    "24h_wind_skill_%": 36.1
+  },
+  "cross_platform_support": {
+    "tested_architectures": [
+      "x86_64 / AMD64 (Standard HPC / Cloud)",
+      "IBM Z / s390x (High-Reliability Enterprise Mainframe)",
+      "ARM64 / AArch64 (Apple Silicon / Graviton / Edge)"
+    ],
+    "active_architecture": "x86_64 / AMD64 (AMD64)"
+  }
+}
