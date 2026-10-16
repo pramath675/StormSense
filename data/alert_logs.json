@@ -1,5 +1,47 @@
 [
   {
+    "id": "EVT_1792167693_2",
+    "timestamp": "2026-10-16T16:21:33Z",
+    "location_name": "Puri Marine Base",
+    "storm_name": "REMAL",
+    "storm_id": "REMAL",
+    "distance_km": 169.4,
+    "wind_kph": 185.0,
+    "category": "Category 3 (Severe)",
+    "recipient": "Chief Commander",
+    "channel": "Simulated Web Console",
+    "delivery_status": "SIMULATED_SUCCESS",
+    "details": "Dispatched to simulated CycloneGuard AI console (No live bot token provided)."
+  },
+  {
+    "id": "EVT_1792167693_1",
+    "timestamp": "2026-10-16T16:21:33Z",
+    "location_name": "Chennai Port Trust",
+    "storm_name": "System 91W",
+    "storm_id": "SYSTEM_91W",
+    "distance_km": 201.0,
+    "wind_kph": 65.0,
+    "category": "Category 1",
+    "recipient": "Tamil Nadu Marine Safety Cell",
+    "channel": "Simulated Web Console",
+    "delivery_status": "SIMULATED_SUCCESS",
+    "details": "Dispatched to simulated CycloneGuard AI console (No live bot token provided)."
+  },
+  {
+    "id": "EVT_1792167693_0",
+    "timestamp": "2026-10-16T16:21:33Z",
+    "location_name": "Puri Coastal Defense Base",
+    "storm_name": "REMAL",
+    "storm_id": "REMAL",
+    "distance_km": 169.4,
+    "wind_kph": 185.0,
+    "category": "Category 3 (Severe)",
+    "recipient": "Odisha Disaster Management Cell",
+    "channel": "Simulated Web Console",
+    "delivery_status": "SIMULATED_SUCCESS",
+    "details": "Dispatched to simulated CycloneGuard AI console (No live bot token provided)."
+  },
+  {
     "id": "EVT_1792166793_2",
     "timestamp": "2026-10-16T16:06:33Z",
     "location_name": "Puri Marine Base",

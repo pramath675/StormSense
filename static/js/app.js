@@ -87,14 +87,17 @@ class CycloneGuardApp {
         });
 
         // Floating Globe Controls
+        const btnCompass = document.getElementById("btnCompass");
         const btnZoomIn = document.getElementById("btnZoomIn");
         const btnZoomOut = document.getElementById("btnZoomOut");
         const btnResetView = document.getElementById("btnResetView");
         const btnToggle3D = document.getElementById("btnToggle3D");
 
+        if (btnCompass) btnCompass.addEventListener("click", () => this.globe.resetView());
         if (btnZoomIn) btnZoomIn.addEventListener("click", () => this.globe.zoomIn());
         if (btnZoomOut) btnZoomOut.addEventListener("click", () => this.globe.zoomOut());
         if (btnResetView) btnResetView.addEventListener("click", () => this.globe.resetView());
+        if (btnToggle3D) btnToggle3D.addEventListener("click", () => this.globe.togglePerspective3D());
 
         // Timeline Controls (Play/Pause & Thumbnails)
         const playBtn = document.getElementById("timelinePlayBtn");
@@ -231,8 +234,8 @@ class CycloneGuardApp {
         // Re-render floating card active highlights
         this.renderActiveStormsCards(this.activeStorms);
 
-        // 1. Fly Cesium Camera to Storm
-        this.globe.flyToCoordinates(storm.current_lat, storm.current_lon, 3200000.0);
+        // 1. Fly Cesium Camera centered to Storm
+        this.globe.flyToCoordinates(storm.current_lat, storm.current_lon, 3600000.0, -89.9);
 
         // 2. Render Forecast Corridor & Cone on Globe
         this.globe.renderForecastTrack(storm);
@@ -372,6 +375,12 @@ class CycloneGuardApp {
             document.getElementById("mlBenchmarkModal").classList.add("open");
         } else if (navId === "global-view") {
             this.globe.resetView();
+        } else if (navId === "live-tracking") {
+            if (this.selectedStorm) {
+                this.globe.flyToCoordinates(this.selectedStorm.current_lat, this.selectedStorm.current_lon, 3600000.0, -89.9);
+            } else {
+                this.globe.resetView();
+            }
         }
     }
 

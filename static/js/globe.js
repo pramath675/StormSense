@@ -63,15 +63,22 @@ class GlobeEngine {
         controller.maximumZoomDistance = 45000000.0;
         controller.enableCollisionDetection = true;
 
-        // 4. Position initial camera smoothly over India & Bay of Bengal
+        // 4. Position initial camera smoothly centered over India & Bay of Bengal
         this.viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(86.5, 17.5, 4800000.0),
+            destination: Cesium.Cartesian3.fromDegrees(82.0, 18.5, 5200000.0),
             orientation: {
                 heading: Cesium.Math.toRadians(0.0),
-                pitch: Cesium.Math.toRadians(-68.0),
+                pitch: Cesium.Math.toRadians(-89.9),
                 roll: 0.0
             },
-            duration: 2.0
+            duration: 1.5
+        });
+
+        // Ensure Cesium canvas internal dimensions perfectly match DOM container
+        window.addEventListener("resize", () => {
+            if (this.viewer && !this.viewer.isDestroyed()) {
+                this.viewer.resize();
+            }
         });
 
         this.setupInteractions();
@@ -264,7 +271,7 @@ class GlobeEngine {
         }
     }
 
-    flyToCoordinates(lat, lon, height = 30000.0, pitchDeg = -78.0) {
+    flyToCoordinates(lat, lon, height = 30000.0, pitchDeg = -89.9) {
         this.viewer.camera.flyTo({
             destination: Cesium.Cartesian3.fromDegrees(lon, lat, height),
             orientation: {
@@ -272,7 +279,7 @@ class GlobeEngine {
                 pitch: Cesium.Math.toRadians(pitchDeg),
                 roll: 0.0
             },
-            duration: 1.5
+            duration: 1.2
         });
     }
 
@@ -286,10 +293,10 @@ class GlobeEngine {
             destination: Cesium.Cartesian3.fromDegrees(lon, lat, targetH),
             orientation: {
                 heading: this.viewer.camera.heading,
-                pitch: this.viewer.camera.pitch,
+                pitch: Cesium.Math.toRadians(-89.9),
                 roll: 0
             },
-            duration: 0.5
+            duration: 0.4
         });
     }
 
@@ -303,23 +310,51 @@ class GlobeEngine {
             destination: Cesium.Cartesian3.fromDegrees(lon, lat, targetH),
             orientation: {
                 heading: this.viewer.camera.heading,
-                pitch: this.viewer.camera.pitch,
+                pitch: Cesium.Math.toRadians(-89.9),
                 roll: 0
             },
-            duration: 0.5
+            duration: 0.4
         });
     }
 
     resetView() {
+        // Perfectly centers the entire Earth globe on screen
         this.viewer.camera.flyTo({
-            destination: Cesium.Cartesian3.fromDegrees(86.5, 17.5, 4800000.0),
+            destination: Cesium.Cartesian3.fromDegrees(80.0, 18.0, 9600000.0),
             orientation: {
                 heading: 0,
-                pitch: Cesium.Math.toRadians(-68.0),
+                pitch: Cesium.Math.toRadians(-89.9),
                 roll: 0
             },
-            duration: 1.5
+            duration: 1.2
         });
+    }
+
+    togglePerspective3D() {
+        const currPitch = Cesium.Math.toDegrees(this.viewer.camera.pitch);
+        const carto = this.viewer.camera.positionCartographic;
+        const lon = Cesium.Math.toDegrees(carto.longitude);
+        const lat = Cesium.Math.toDegrees(carto.latitude);
+        const h = carto.height;
+
+        const isTilted = currPitch > -75.0;
+        const targetPitch = isTilted ? -89.9 : -65.0;
+
+        this.viewer.camera.flyTo({
+            destination: Cesium.Cartesian3.fromDegrees(lon, lat, h),
+            orientation: {
+                heading: 0.0,
+                pitch: Cesium.Math.toRadians(targetPitch),
+                roll: 0.0
+            },
+            duration: 0.8
+        });
+
+        const btn = document.getElementById("btnToggle3D");
+        if (btn) {
+            btn.textContent = isTilted ? "3D" : "2D";
+            btn.style.color = isTilted ? "#fff" : "var(--cyan-primary)";
+        }
     }
 
     renderActiveStorms(storms) {
