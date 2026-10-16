@@ -17,6 +17,7 @@ class GlobeEngine {
         this.cityEntities = [];
         this.currentStormData = null;
         this.currentLayer = "satellite";
+        this.inspectionPinEntity = null;
 
         this.initCesium();
     }
@@ -161,20 +162,46 @@ class GlobeEngine {
     setupInteractions() {
         const handler = new Cesium.ScreenSpaceEventHandler(this.viewer.scene.canvas);
         
-        // Single click: pick storm or city detail
+        // Single click: pick storm or inspect ANY clicked point on Earth (land, sea, city, town)
         handler.setInputAction((movement) => {
             const picked = this.viewer.scene.pick(movement.position);
             if (Cesium.defined(picked) && picked.id && picked.id.stormId) {
                 if (window.app) window.app.selectStorm(picked.id.stormId);
-            } else if (Cesium.defined(picked) && picked.id && picked.id.cityName) {
-                if (window.app) window.app.showCityDetail(picked.id.cityName);
+                return;
+            }
+
+            // Pick 3D ground coordinates anywhere on Earth
+            let cartesian = null;
+            const ray = this.viewer.camera.getPickRay(movement.position);
+            if (ray) {
+                cartesian = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+            }
+            if (!cartesian) {
+                cartesian = this.viewer.camera.pickEllipsoid(movement.position, this.viewer.scene.globe.ellipsoid);
+            }
+
+            if (cartesian) {
+                const carto = Cesium.Cartographic.fromCartesian(cartesian);
+                const lon = Cesium.Math.toDegrees(carto.longitude);
+                const lat = Cesium.Math.toDegrees(carto.latitude);
+
+                this.setInspectionPin(lat, lon);
+                if (window.app && window.app.inspectLocation) {
+                    window.app.inspectLocation(lat, lon);
+                }
             }
         }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
         // Double click: zoom smoothly down to town / street level anywhere clicked
         handler.setInputAction((movement) => {
             const ray = this.viewer.camera.getPickRay(movement.position);
-            const cartesian = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+            let cartesian = null;
+            if (ray) {
+                cartesian = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+            }
+            if (!cartesian) {
+                cartesian = this.viewer.camera.pickEllipsoid(movement.position, this.viewer.scene.globe.ellipsoid);
+            }
             if (cartesian) {
                 const carto = Cesium.Cartographic.fromCartesian(cartesian);
                 const lon = Cesium.Math.toDegrees(carto.longitude);
@@ -184,6 +211,57 @@ class GlobeEngine {
                 this.flyToCoordinates(lat, lon, targetH, -82.0);
             }
         }, Cesium.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    }
+
+    setInspectionPin(lat, lon, labelText = "📍 Inspecting Point...") {
+        this.clearInspectionPin();
+
+        this.inspectionPinEntity = this.viewer.entities.add({
+            position: Cesium.Cartesian3.fromDegrees(lon, lat, 15.0),
+            point: {
+                pixelSize: 12,
+                color: Cesium.Color.fromCssColorString("#00f0ff"),
+                outlineColor: Cesium.Color.WHITE,
+                outlineWidth: 2,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
+            },
+            ellipse: {
+                semiMinorAxis: 18000.0,
+                semiMajorAxis: 18000.0,
+                material: Cesium.Color.fromCssColorString("#00f0ff").withAlpha(0.20),
+                outline: true,
+                outlineColor: Cesium.Color.fromCssColorString("#00f0ff").withAlpha(0.80),
+                outlineWidth: 2.0,
+                height: 5.0
+            },
+            label: {
+                text: labelText,
+                font: 'bold 11px "Inter", sans-serif',
+                fillColor: Cesium.Color.WHITE,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 3,
+                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                pixelOffset: new Cesium.Cartesian2(0, -22),
+                showBackground: true,
+                backgroundColor: Cesium.Color.fromCssColorString("rgba(5, 12, 26, 0.90)"),
+                backgroundPadding: new Cesium.Cartesian2(8, 4),
+                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0.0, 7500000.0),
+                disableDepthTestDistance: Number.POSITIVE_INFINITY
+            }
+        });
+    }
+
+    updateInspectionPinLabel(text) {
+        if (this.inspectionPinEntity && this.inspectionPinEntity.label) {
+            this.inspectionPinEntity.label.text = `📍 ${text}`;
+        }
+    }
+
+    clearInspectionPin() {
+        if (this.inspectionPinEntity) {
+            this.viewer.entities.remove(this.inspectionPinEntity);
+            this.inspectionPinEntity = null;
+        }
     }
 
     flyToCoordinates(lat, lon, height = 30000.0, pitchDeg = -78.0) {

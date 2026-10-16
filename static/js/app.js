@@ -277,7 +277,7 @@ class CycloneGuardApp {
             else if (loc.risk.toLowerCase() === "high") riskClass = "high";
 
             return `
-                <tr onclick="app.globe.flyToCoordinates(${loc.lat}, ${loc.lon}, 28000.0)" title="Click to zoom in to ${loc.name}">
+                <tr onclick="app.inspectLocation(${loc.lat}, ${loc.lon}); app.globe.setInspectionPin(${loc.lat}, ${loc.lon}); app.globe.flyToCoordinates(${loc.lat}, ${loc.lon}, 28000.0)" style="cursor: pointer;" title="Click to view full cyclone & weather intelligence for ${loc.name}">
                     <td style="font-weight: 700; color: #fff;">${loc.name}</td>
                     <td style="color: #94a3b8;">${loc.eta}</td>
                     <td><span class="risk-badge-sm ${riskClass}">${loc.risk}</span></td>
@@ -292,7 +292,8 @@ class CycloneGuardApp {
         if (!this.selectedStorm || !this.selectedStorm.key_locations) return;
         const loc = this.selectedStorm.key_locations.find(l => l.name === cityName);
         if (loc) {
-            alert(`📍 Location: ${loc.name} (${loc.state || 'Coastal'})\nETA: ${loc.eta}\nRisk Level: ${loc.risk}\nExpected Winds: ${loc.max_wind} km/h\nExpected Rain: ${loc.expected_rain} mm`);
+            this.globe.setInspectionPin(loc.lat, loc.lon);
+            this.inspectLocation(loc.lat, loc.lon);
         }
     }
 
@@ -331,6 +332,8 @@ class CycloneGuardApp {
         const matchedTown = towns.find(t => t.name.toLowerCase().includes(clean));
         if (matchedTown) {
             this.globe.flyToCoordinates(matchedTown.lat, matchedTown.lon, matchedTown.height);
+            this.globe.setInspectionPin(matchedTown.lat, matchedTown.lon);
+            this.inspectLocation(matchedTown.lat, matchedTown.lon);
             return;
         }
 
@@ -342,6 +345,8 @@ class CycloneGuardApp {
                 const lat = parseFloat(results[0].lat);
                 const lon = parseFloat(results[0].lon);
                 this.globe.flyToCoordinates(lat, lon, 25000.0);
+                this.globe.setInspectionPin(lat, lon);
+                this.inspectLocation(lat, lon);
             } else {
                 alert(`Location "${query}" not found. Try searching for a city, state, or coastal town.`);
             }
@@ -521,6 +526,153 @@ class CycloneGuardApp {
             document.getElementById("simRiskTier").textContent = res.flood_inundation_risk;
         } catch (e) {
             console.error("Simulation error:", e);
+        }
+    }
+
+    async inspectLocation(lat, lon) {
+        const card = document.getElementById("point-intel-card");
+        if (!card) return;
+
+        // Reveal card and set loading states
+        card.style.display = "block";
+        const placeNameEl = document.getElementById("picPlaceName");
+        const coordsEl = document.getElementById("picCoords");
+        if (placeNameEl) placeNameEl.textContent = "Analyzing location...";
+        if (coordsEl) coordsEl.textContent = `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
+
+        document.getElementById("picTemp").textContent = "--°C";
+        document.getElementById("picFeelsLike").textContent = "Feels: --°C";
+        document.getElementById("picHumidity").textContent = "--%";
+        document.getElementById("picCondition").textContent = "Fetching live weather...";
+        document.getElementById("picPressure").textContent = "-- hPa";
+        document.getElementById("picWind").textContent = "-- km/h";
+        document.getElementById("picGusts").textContent = "Gusts: --";
+        document.getElementById("picThreatTitle").textContent = "Analyzing cyclone threat...";
+        const badgeEl = document.getElementById("picThreatBadge");
+        badgeEl.className = "pic-threat-badge watch";
+        badgeEl.textContent = "CALCULATING";
+        document.getElementById("picDistEye").textContent = "-- km";
+        document.getElementById("picETA").textContent = "Calculating ETA...";
+        document.getElementById("picMaxWind").textContent = "-- km/h";
+        document.getElementById("picExpectedRain").textContent = "-- mm";
+        document.getElementById("picSurge").textContent = "-- m";
+        document.getElementById("picAdvisory").textContent = "Computing threat trajectory and civil vulnerability...";
+        document.getElementById("picNearestShelter").textContent = "Searching nearby shelters...";
+
+        try {
+            const resp = await fetch(`/api/point/intelligence?lat=${lat}&lon=${lon}`);
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            const p = data.place || {};
+            const w = data.weather || {};
+            const impact = data.cyclone_impact || {};
+
+            // 1. Place name & coordinates
+            const placeTitle = p.name || `Location (${lat.toFixed(3)}°, ${lon.toFixed(3)}°)`;
+            if (placeNameEl) placeNameEl.textContent = placeTitle;
+            if (coordsEl) coordsEl.textContent = p.formatted || `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
+            if (this.globe && this.globe.updateInspectionPinLabel) {
+                this.globe.updateInspectionPinLabel(placeTitle);
+            }
+
+            // 2. Real-time Atmospheric Telemetry
+            document.getElementById("picTemp").textContent = `${w.temperature_c ?? '--'}°C`;
+            document.getElementById("picFeelsLike").textContent = `Feels: ${w.feels_like_c ?? '--'}°C`;
+            document.getElementById("picHumidity").textContent = `${w.humidity_pct ?? '--'}%`;
+            document.getElementById("picCondition").textContent = `${w.condition || 'Atmospheric Nominal'}`;
+            document.getElementById("picPressure").textContent = `${w.pressure_hpa ?? '--'} hPa`;
+            document.getElementById("picWind").textContent = `${w.wind_kph ?? '--'} km/h`;
+            document.getElementById("picGusts").textContent = `Gusts: ${w.wind_gusts_kph ?? '--'} km/h`;
+
+            // 3. Cyclone Threat & Impact Assessment
+            const threatBadge = (impact.threat_badge || "WATCH").toUpperCase();
+            badgeEl.className = `pic-threat-badge ${threatBadge.toLowerCase()}`;
+            badgeEl.textContent = threatBadge;
+
+            const stormName = impact.threatening_cyclone || "Cyclone REMAL";
+            document.getElementById("picThreatTitle").innerHTML = `🌀 ${stormName}`;
+            
+            const distCenter = impact.distance_to_center_km ? `${impact.distance_to_center_km} km` : "> 500 km";
+            const distClosest = impact.closest_approach_distance_km ? ` (Closest: ${impact.closest_approach_distance_km} km)` : "";
+            document.getElementById("picDistEye").textContent = `${distCenter}${distClosest}`;
+            
+            // Format ETA
+            let etaFormatted = impact.closest_approach_eta || "Next 48 Hours";
+            if (etaFormatted.includes("T")) {
+                try {
+                    const d = new Date(etaFormatted);
+                    etaFormatted = d.toLocaleDateString("en-GB", { day: '2-digit', month: 'short' }) + " " + d.toLocaleTimeString("en-GB", { hour: '2-digit', minute: '2-digit' }) + " IST";
+                } catch(e) {}
+            }
+            document.getElementById("picETA").textContent = etaFormatted;
+
+            document.getElementById("picMaxWind").textContent = impact.projected_peak_winds || "--";
+            document.getElementById("picExpectedRain").textContent = impact.expected_rainfall || "--";
+            document.getElementById("picSurge").textContent = impact.storm_surge_risk || "--";
+
+            // 4. Civil Advisory & Nearest Shelter
+            const advEl = document.getElementById("picAdvisory");
+            advEl.textContent = impact.civil_action_advisory || "Monitor local meteorological warnings and remain alert.";
+            if (threatBadge === "CRITICAL") {
+                advEl.style.borderLeftColor = "#ef4444";
+                advEl.style.color = "#fca5a5";
+                advEl.style.background = "rgba(239, 68, 68, 0.12)";
+            } else if (threatBadge === "HIGH") {
+                advEl.style.borderLeftColor = "#f59e0b";
+                advEl.style.color = "#fde68a";
+                advEl.style.background = "rgba(245, 158, 11, 0.12)";
+            } else if (threatBadge === "MODERATE") {
+                advEl.style.borderLeftColor = "#eab308";
+                advEl.style.color = "#fef08a";
+                advEl.style.background = "rgba(234, 179, 8, 0.12)";
+            } else {
+                advEl.style.borderLeftColor = "#10b981";
+                advEl.style.color = "#a7f3d0";
+                advEl.style.background = "rgba(16, 185, 129, 0.12)";
+            }
+
+            const shelter = impact.nearest_shelter;
+            if (shelter) {
+                document.getElementById("picNearestShelter").textContent = `${shelter.name} (${shelter.distance_km} km · ${shelter.available_space} open spaces)`;
+            } else {
+                document.getElementById("picNearestShelter").textContent = "Regional Civil Defense Hub";
+            }
+
+            // 5. Actions: Ask AI & Zoom In
+            const askBtn = document.getElementById("picAskAiBtn");
+            if (askBtn) {
+                askBtn.onclick = () => {
+                    const prompt = `Provide a full cyclone threat report for ${placeTitle}. Threat level is ${threatBadge} regarding ${stormName}. What are expected winds, surge, and immediate safety measures?`;
+                    const drawer = document.getElementById("ai-assistant-drawer");
+                    if (drawer) drawer.classList.add("open");
+                    const input = document.getElementById("chatInput");
+                    if (input) {
+                        input.value = prompt;
+                        this.sendChatMessage(prompt);
+                        input.value = "";
+                    }
+                };
+            }
+
+            const zoomBtn = document.getElementById("picZoomBtn");
+            if (zoomBtn) {
+                zoomBtn.onclick = () => {
+                    this.globe.flyToCoordinates(lat, lon, 15000.0, -82.0);
+                };
+            }
+
+        } catch (e) {
+            console.error("Point intelligence error:", e);
+            if (placeNameEl) placeNameEl.textContent = `Lat: ${lat.toFixed(3)}°, Lon: ${lon.toFixed(3)}°`;
+            document.getElementById("picCondition").textContent = "Offline / Local estimation";
+        }
+    }
+
+    closePointIntelCard() {
+        const card = document.getElementById("point-intel-card");
+        if (card) card.style.display = "none";
+        if (this.globe && this.globe.clearInspectionPin) {
+            this.globe.clearInspectionPin();
         }
     }
 

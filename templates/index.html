@@ -191,6 +191,93 @@
                 </div>
             </div>
 
+            <!-- Floating Point Intelligence Card (Appears on clicking any place on the map) -->
+            <div id="point-intel-card" class="glass-panel" style="display: none;">
+                <div class="pic-header">
+                    <div class="pic-title-wrap">
+                        <span style="font-size: 16px;">📍</span>
+                        <div>
+                            <div class="pic-place-name" id="picPlaceName">Inspecting Point...</div>
+                            <div class="pic-coords" id="picCoords">19.8135° N, 85.8312° E</div>
+                        </div>
+                    </div>
+                    <button class="pic-close-btn" onclick="app.closePointIntelCard()" title="Close">&times;</button>
+                </div>
+
+                <div class="pic-body">
+                    <!-- Atmospheric Telemetry Grid -->
+                    <div class="pic-weather-grid">
+                        <div class="pic-cell">
+                            <span class="pic-lbl">Temperature</span>
+                            <span class="pic-val" id="picTemp">--°C</span>
+                            <span class="pic-sub" id="picFeelsLike">Feels: --°C</span>
+                        </div>
+                        <div class="pic-cell">
+                            <span class="pic-lbl">Humidity</span>
+                            <span class="pic-val" id="picHumidity">--%</span>
+                            <span class="pic-sub" id="picCondition">Analyzing...</span>
+                        </div>
+                        <div class="pic-cell">
+                            <span class="pic-lbl">Pressure</span>
+                            <span class="pic-val" id="picPressure">-- hPa</span>
+                            <span class="pic-sub">Barometric</span>
+                        </div>
+                        <div class="pic-cell">
+                            <span class="pic-lbl">Local Wind</span>
+                            <span class="pic-val" id="picWind">-- km/h</span>
+                            <span class="pic-sub" id="picGusts">Gusts: --</span>
+                        </div>
+                    </div>
+
+                    <!-- Cyclone Threat & Impact Assessment -->
+                    <div class="pic-threat-box">
+                        <div class="pic-threat-header">
+                            <span class="pic-threat-title" id="picThreatTitle">🌀 Threatening: Cyclone REMAL</span>
+                            <span class="pic-threat-badge" id="picThreatBadge">CRITICAL</span>
+                        </div>
+                        <div class="pic-threat-details">
+                            <div class="pic-detail-row">
+                                <span class="lbl">Distance to Eye:</span>
+                                <strong id="picDistEye">-- km</strong>
+                            </div>
+                            <div class="pic-detail-row">
+                                <span class="lbl">Landfall / Closest ETA:</span>
+                                <strong id="picETA" style="color: #f59e0b;">--</strong>
+                            </div>
+                            <div class="pic-detail-row">
+                                <span class="lbl">Projected Max Winds:</span>
+                                <strong id="picMaxWind" style="color: #ef4444;">--</strong>
+                            </div>
+                            <div class="pic-detail-row">
+                                <span class="lbl">Expected Rain:</span>
+                                <strong id="picExpectedRain" style="color: #00d2ff;">--</strong>
+                            </div>
+                            <div class="pic-detail-row">
+                                <span class="lbl">Storm Surge:</span>
+                                <strong id="picSurge">--</strong>
+                            </div>
+                        </div>
+
+                        <!-- Civil Advisory Box -->
+                        <div class="pic-advisory" id="picAdvisory">
+                            MANDATORY EVACUATION: Move immediately to designated storm shelters.
+                        </div>
+
+                        <!-- Nearest Shelter -->
+                        <div class="pic-shelter-row" id="picShelterRow">
+                            <span>🏥 Nearest Shelter:</span>
+                            <strong id="picNearestShelter">Puri Multi-Purpose Shelter (4.2 km · 338 open)</strong>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="pic-actions">
+                        <button class="pic-action-btn primary" id="picAskAiBtn">💬 Ask AI About This Place</button>
+                        <button class="pic-action-btn secondary" id="picZoomBtn">🔎 Zoom In (15 km)</button>
+                    </div>
+                </div>
+            </div>
+
             <!-- Wind Speed Legend Box (Bottom-Left) -->
             <div id="map-wind-legend" class="glass-panel">
                 <div class="legend-title">Wind Speed (km/h)</div>
