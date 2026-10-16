@@ -456,11 +456,24 @@ class CycloneGuardApp {
         const msgContainer = document.getElementById("chatMessages");
         if (!msgContainer) return;
 
+        // Ensure drawer is open
+        const drawer = document.getElementById("ai-assistant-drawer");
+        if (drawer && !drawer.classList.contains("open")) {
+            drawer.classList.add("open");
+        }
+
         // Append user bubble
         const userDiv = document.createElement("div");
         userDiv.className = "chat-msg user";
         userDiv.textContent = userText;
         msgContainer.appendChild(userDiv);
+        msgContainer.scrollTop = msgContainer.scrollHeight;
+
+        // Add a temporary analyzing indicator
+        const typingDiv = document.createElement("div");
+        typingDiv.className = "chat-msg bot typing";
+        typingDiv.innerHTML = '<span style="font-size: 10px; color: #00d2ff;">🧠 Analyzing topic & meteorological intelligence...</span>';
+        msgContainer.appendChild(typingDiv);
         msgContainer.scrollTop = msgContainer.scrollHeight;
 
         try {
@@ -471,13 +484,35 @@ class CycloneGuardApp {
             });
             const data = await r.json();
 
+            // Remove typing indicator
+            if (typingDiv.parentNode) {
+                typingDiv.parentNode.removeChild(typingDiv);
+            }
+
             const botDiv = document.createElement("div");
             botDiv.className = "chat-msg bot";
-            botDiv.innerHTML = data.reply.replace(/\n/g, "<br>");
+
+            // Add topic badge
+            const topicLabel = data.topic_label || "Intelligence Briefing";
+            const isScopeWarning = !data.is_on_topic;
+            const badgeHtml = `<span class="chat-topic-badge ${isScopeWarning ? 'warning' : ''}">Topic: ${topicLabel}</span>`;
+
+            // Simple markdown parser for bold, italics, bullets, newlines
+            let textHtml = data.reply
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+
+            botDiv.innerHTML = `${badgeHtml}<div>${textHtml}</div>`;
             msgContainer.appendChild(botDiv);
             msgContainer.scrollTop = msgContainer.scrollHeight;
         } catch (e) {
             console.error("Chat error:", e);
+            if (typingDiv.parentNode) typingDiv.parentNode.removeChild(typingDiv);
+            const errDiv = document.createElement("div");
+            errDiv.className = "chat-msg bot";
+            errDiv.textContent = "AI model connection error. Please try again.";
+            msgContainer.appendChild(errDiv);
         }
     }
 

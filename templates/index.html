@@ -659,23 +659,41 @@
     <!-- 4. SLIDEOVER AI ASSISTANT CHAT DRAWER -->
     <div id="ai-assistant-drawer" class="glass-panel">
         <div class="chat-header">
-            <div class="chat-title">
-                <span>🤖</span> CycloneGuard AI Assistant
+            <div>
+                <div class="chat-title">
+                    <span>🤖</span> CycloneGuard AI Assistant
+                </div>
+                <div class="chat-model-indicator">
+                    <span class="chat-model-dot"></span>
+                    <span>Model: CycloneGuard-MetAI v3.2 (Domain-Restricted)</span>
+                </div>
             </div>
-            <button style="background:transparent; border:none; color:#64748b; font-size:16px; cursor:pointer;" id="closeAiChatBtn">&times;</button>
+            <button style="background:transparent; border:none; color:#94a3b8; font-size:18px; cursor:pointer;" id="closeAiChatBtn">&times;</button>
         </div>
         <div class="chat-messages-container" id="chatMessages">
             <div class="chat-msg bot">
-                👋 Hello! I am CycloneGuard AI. How can I assist your disaster planning? You can ask me:
+                <span class="chat-topic-badge">Model Initialized</span>
+                <div>👋 Hello! I am <strong>CycloneGuard-MetAI</strong>, your domain-specialized cyclone intelligence model. How can I assist your disaster planning? You can ask:</div>
                 <div style="margin-top: 6px; font-size: 10px; color: #38bdf8;">
                     • "When is REMAL expected to make landfall?"<br>
-                    • "What shelters are available in Puri?"<br>
-                    • "Which districts have extreme rainfall warnings?"
+                    • "Is Puri or Paradip in the danger zone?"<br>
+                    • "What shelters are available with open beds?"<br>
+                    • "What should I pack in an emergency kit?"
                 </div>
             </div>
         </div>
+        <!-- Quick Topic Chips -->
+        <div class="chat-quick-topics">
+            <button class="cqt-btn" onclick="app.sendChatMessage('When is Cyclone REMAL expected to make landfall?')">🌀 Landfall ETA</button>
+            <button class="cqt-btn" onclick="app.sendChatMessage('Is Puri in the danger zone?')">📍 Check City Risk</button>
+            <button class="cqt-btn" onclick="app.sendChatMessage('What are the peak wind speeds and gusts?')">💨 Wind Speeds</button>
+            <button class="cqt-btn" onclick="app.sendChatMessage('What is the projected storm surge height?')">🌊 Storm Surge</button>
+            <button class="cqt-btn" onclick="app.sendChatMessage('Which emergency shelters have available beds?')">🛡️ Shelters</button>
+            <button class="cqt-btn" onclick="app.sendChatMessage('What should I pack in an emergency cyclone kit?')">🎒 Emergency Kit</button>
+            <button class="cqt-btn" onclick="app.sendChatMessage('What is the capital of France?')">⚠️ Test Off-Topic</button>
+        </div>
         <div class="chat-input-bar">
-            <input type="text" id="chatInput" placeholder="Ask a geospatial question...">
+            <input type="text" id="chatInput" placeholder="Ask a cyclone or weather question...">
             <button class="chat-send-btn" id="chatSendBtn">Send</button>
         </div>
     </div>
