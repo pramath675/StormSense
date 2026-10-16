@@ -510,13 +510,14 @@ body {
 /* Wind Speed Legend Card (Bottom-Left on Globe) */
 #map-wind-legend {
     position: absolute;
-    bottom: 240px;
+    bottom: 14px;
     left: 14px;
     width: 145px;
     padding: 10px 12px;
     border-radius: 8px;
     z-index: 40;
 }
+
 
 .legend-title {
     font-size: 10.5px;
@@ -1232,15 +1233,18 @@ body {
     padding: 20px;
 }
 
-/* Cesium Viewport & Credit Overrides */
+/* Cesium Viewport, Error Panel & Credit Overrides */
 .cesium-viewer-bottom,
 .cesium-credit-logoContainer,
 .cesium-credit-textContainer,
+.cesium-credit-expand-link,
 .cesium-widget-credits,
 .cesium-viewer-toolbar,
 .cesium-viewer-animationContainer,
 .cesium-viewer-timelineContainer,
-.cesium-infoBox {
+.cesium-infoBox,
+.cesium-widget-errorPanel {
     display: none !important;
 }
+
 

@@ -25,13 +25,15 @@ class GlobeEngine {
     initCesium() {
         Cesium.Ion.defaultAccessToken = "";
 
-        // Default photorealistic ESRI imagery or CartoDB Dark
-        const esriImageryProvider = new Cesium.ArcGisMapServerImageryProvider({
-            url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+        // Sleek CartoDB Dark basemap matching CycloneGuard AI design
+        const darkImageryProvider = new Cesium.UrlTemplateImageryProvider({
+            url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+            subdomains: ["a", "b", "c", "d"],
+            maximumLevel: 19
         });
 
         this.viewer = new Cesium.Viewer(this.containerId, {
-            imageryProvider: esriImageryProvider,
+            imageryProvider: darkImageryProvider,
             baseLayerPicker: false,
             geocoder: false,
             homeButton: false,
@@ -51,7 +53,7 @@ class GlobeEngine {
 
         const scene = this.viewer.scene;
         scene.globe.baseColor = Cesium.Color.fromCssColorString("#020610");
-        scene.globe.enableLighting = true;
+        scene.globe.enableLighting = false;
         scene.backgroundColor = Cesium.Color.fromCssColorString("#020610");
 
         // Focus initial camera exactly on India, Bay of Bengal, and Indian Ocean
@@ -86,10 +88,9 @@ class GlobeEngine {
         layers.removeAll();
 
         let provider;
-        if (type === "dark") {
+        if (type === "satellite") {
             provider = new Cesium.UrlTemplateImageryProvider({
-                url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-                subdomains: ["a", "b", "c", "d"],
+                url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
                 maximumLevel: 19
             });
         } else if (type === "osm") {
@@ -97,11 +98,17 @@ class GlobeEngine {
                 url: "https://tile.openstreetmap.org/"
             });
         } else {
-            provider = new Cesium.ArcGisMapServerImageryProvider({
-                url: "https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer"
+            provider = new Cesium.UrlTemplateImageryProvider({
+                url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+                subdomains: ["a", "b", "c", "d"],
+                maximumLevel: 19
             });
         }
-        layers.addImageryProvider(provider);
+        try {
+            layers.addImageryProvider(provider);
+        } catch (e) {
+            console.warn("Basemap fallback:", e);
+        }
     }
 
     flyToCoordinates(lat, lon, height = 2600000.0) {
