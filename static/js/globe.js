@@ -365,21 +365,28 @@ class GlobeEngine {
             const lon = storm.current_lon;
 
             let color = Cesium.Color.fromCssColorString("#00d2ff");
-            let icon = "🌀";
             let pSize = 14;
-            let labelText = `${storm.name} · ${storm.wind_kph} km/h`;
+            const wind = storm.wind_kph || 0;
 
-            if (storm.id === "REMAL") {
+            if (wind >= 210) {
                 color = Cesium.Color.fromCssColorString("#ef4444");
                 pSize = 18;
-                labelText = `🌀 REMAL · ${storm.wind_kph} km/h (Cat 3)`;
-            } else if (storm.id === "INVEST_94B") {
+            } else if (wind >= 160) {
+                color = Cesium.Color.fromCssColorString("#f97316");
+                pSize = 16;
+            } else if (wind >= 120) {
                 color = Cesium.Color.fromCssColorString("#f59e0b");
-                labelText = `Invest 94B · ${storm.wind_kph} km/h`;
-            } else if (storm.id === "SYSTEM_91W") {
+                pSize = 15;
+            } else if (wind >= 63) {
                 color = Cesium.Color.fromCssColorString("#00d2ff");
-                labelText = `System 91W · ${storm.wind_kph} km/h`;
+                pSize = 14;
+            } else {
+                color = Cesium.Color.fromCssColorString("#34d399");
+                pSize = 12;
             }
+
+            const catLabel = storm.category_native || storm.category || "";
+            const labelText = `🌀 ${storm.name} · ${storm.wind_kph} km/h (${catLabel})`;
 
             // 1. Storm center marker
             const marker = this.viewer.entities.add({
@@ -426,17 +433,15 @@ class GlobeEngine {
             });
             this.activeStormEntities.push(galeCircle);
 
-            // 3. Past track polyline
+            // 3. Observed / Past track polyline (SOLID as required by Phase 3)
             if (storm.past_track && storm.past_track.length > 1) {
                 const pastCoords = [];
                 storm.past_track.forEach(p => pastCoords.push(p.lon, p.lat));
                 const pastLine = this.viewer.entities.add({
                     polyline: {
                         positions: Cesium.Cartesian3.fromDegreesArray(pastCoords),
-                        width: 3.0,
-                        material: new Cesium.PolylineDashMaterialProperty({
-                            color: color.withAlpha(0.85)
-                        })
+                        width: 3.5,
+                        material: new Cesium.ColorMaterialProperty(color.withAlpha(0.92))
                     }
                 });
                 this.activeStormEntities.push(pastLine);
@@ -493,20 +498,20 @@ class GlobeEngine {
         this.forecastEntities.forEach(e => this.viewer.entities.remove(e));
         this.forecastEntities = [];
 
-        if (!storm || !storm.forecast_track) return;
+        if (!storm || !storm.forecast_track || storm.forecast_track.length === 0) return;
 
-        // 1. Main Forecast Polyline (Glowing corridor)
+        // 1. Forecast Track Polyline (DASHED as required by Phase 3)
         const coords = [storm.current_lon, storm.current_lat];
         storm.forecast_track.forEach(pt => coords.push(pt.lon, pt.lat));
 
         const forecastLine = this.viewer.entities.add({
-            name: `${storm.name} Forecast Corridor`,
+            name: `${storm.name} Forecast Track`,
             polyline: {
                 positions: Cesium.Cartesian3.fromDegreesArray(coords),
-                width: 4.0,
-                material: new Cesium.PolylineGlowMaterialProperty({
-                    glowPower: 0.35,
-                    color: Cesium.Color.fromCssColorString("#ef4444")
+                width: 3.5,
+                material: new Cesium.PolylineDashMaterialProperty({
+                    color: Cesium.Color.fromCssColorString("#ef4444"),
+                    dashLength: 16.0
                 })
             }
         });
@@ -587,10 +592,10 @@ class GlobeEngine {
         if (!storm || !storm.timeline_snapshots || !storm.timeline_snapshots[stepIndex]) return;
 
         const snap = storm.timeline_snapshots[stepIndex];
-        const remalMarker = this.activeStormEntities.find(e => e.stormId === "REMAL");
-        if (remalMarker) {
-            remalMarker.position = Cesium.Cartesian3.fromDegrees(snap.lon, snap.lat);
-            remalMarker.label.text = `🌀 ${storm.name} (${snap.date_label}) · ${snap.wind_kph} km/h`;
+        const marker = this.activeStormEntities.find(e => e.stormId === storm.id);
+        if (marker) {
+            marker.position = Cesium.Cartesian3.fromDegrees(snap.lon, snap.lat);
+            marker.label.text = `🌀 ${storm.name} (${snap.date_label}) · ${snap.wind_kph} km/h`;
         }
     }
 }

@@ -103,10 +103,29 @@ class TelemetryChartsEngine {
             this.intensityChart.destroy();
         }
 
-        const labels = ["16 Oct 12:00", "17 Oct 12:00 (Now)", "18 Oct 12:00", "19 Oct 12:00", "20 Oct 12:00", "21 Oct 12:00"];
-        
+        const labels = [];
+        const windData = [];
+        const pressureData = [];
+        const rainData = [];
+
+        if (storm) {
+            labels.push("Now");
+            windData.push(storm.wind_kph || Math.round((storm.wind_kt || 0) * 1.852) || 0);
+            pressureData.push(storm.pressure_hpa || 1010);
+            rainData.push(Math.round((storm.wind_kph || 80) * 0.7));
+
+            if (storm.forecast_track && storm.forecast_track.length > 0) {
+                storm.forecast_track.forEach(pt => {
+                    labels.push(`+${pt.hour || 24}h`);
+                    windData.push(pt.wind_kph || Math.round((pt.wind_kt || 0) * 1.852) || 0);
+                    pressureData.push(pt.pressure_hpa || 1005);
+                    rainData.push(Math.round((pt.wind_kph || 60) * 0.5));
+                });
+            }
+        }
+
         let datasetLabel = "Wind Speed (km/h)";
-        let chartData = [120, 185, 160, 95, 50, 30];
+        let chartData = windData;
         let borderColor = "#ef4444";
         let bgColor = "rgba(239, 68, 68, 0.15)";
         let yUnit = "km/h";
@@ -114,13 +133,13 @@ class TelemetryChartsEngine {
 
         if (metricType === "pressure") {
             datasetLabel = "Central Pressure (hPa)";
-            chartData = [982, 950, 965, 986, 998, 1006];
+            chartData = pressureData;
             borderColor = "#f59e0b";
             bgColor = "rgba(245, 158, 11, 0.15)";
             yUnit = "hPa";
         } else if (metricType === "rain") {
-            datasetLabel = "Precipitation (mm/h)";
-            chartData = [45, 85, 75, 40, 15, 5];
+            datasetLabel = "Estimated Precipitation (mm/h)";
+            chartData = rainData;
             borderColor = "#00d2ff";
             bgColor = "rgba(0, 210, 255, 0.4)";
             yUnit = "mm/h";
@@ -212,54 +231,59 @@ class TelemetryChartsEngine {
         ctx.stroke();
     }
 
-    renderSatelliteIRCanvas() {
-        const canvas = document.getElementById("satelliteIRCanvas");
-        if (!canvas) return;
-        const ctx = canvas.getContext("2d");
-        const w = canvas.width = canvas.parentElement.clientWidth || 340;
-        const h = canvas.height = canvas.parentElement.clientHeight || 160;
-        const cx = w / 2;
-        const cy = h / 2;
+    renderSatelliteImagery(storm) {
+        const wrap = document.getElementById("satellitePreviewWrap");
+        const img = document.getElementById("satelliteRealImg");
+        const noData = document.getElementById("satelliteNoData");
+        const timeBadge = document.getElementById("satTimestampBadge");
+        const sensorEl = document.getElementById("satSensorName");
+        const titleEl = document.getElementById("satPanelTitle");
 
-        ctx.fillStyle = "#010409";
-        ctx.fillRect(0, 0, w, h);
+        if (!storm) return;
 
-        // CDO Central Dense Overcast Cloud Top Gradient
-        const cdoGrad = ctx.createRadialGradient(cx, cy, 8, cx, cy, 75);
-        cdoGrad.addColorStop(0, "#020617"); // Warm calm eye
-        cdoGrad.addColorStop(0.15, "#ffffff"); // Coldest eyewall tops (< -80C)
-        cdoGrad.addColorStop(0.35, "#e879f9"); // Deep convection
-        cdoGrad.addColorStop(0.60, "#a855f7"); // Strong convection
-        cdoGrad.addColorStop(0.85, "#2563eb"); // Feeder band tops
-        cdoGrad.addColorStop(1, "transparent");
+        const basin = (storm.basin || "").toLowerCase();
+        const lat = storm.current_lat || storm.lat || 0;
+        const lon = storm.current_lon || storm.lon || 0;
+        const now = new Date();
+        const dateStr = now.toISOString().slice(0, 10);
 
-        ctx.fillStyle = cdoGrad;
-        ctx.beginPath();
-        ctx.arc(cx, cy, 75, 0, Math.PI * 2);
-        ctx.fill();
+        let layer = null;
+        let sensorName = "No Sensor";
 
-        // Spiral IR banding
-        for (let i = 0; i < 3; i++) {
-            ctx.beginPath();
-            for (let a = 0; a < Math.PI * 1.5; a += 0.1) {
-                const r = 20 + a * 25 + i * 15;
-                const x = cx + r * Math.cos(a + i);
-                const y = cy + r * Math.sin(a + i);
-                if (a === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.strokeStyle = "rgba(168, 85, 247, 0.45)";
-            ctx.lineWidth = 12;
-            ctx.stroke();
+        if (basin.includes("west pacific") || basin.includes("australian") || lon > 100) {
+            layer = "Himawari_AHI_Band13_Clean_Infrared";
+            sensorName = "JMA Himawari-9 AHI (10.4 µm)";
+        } else if (basin.includes("east pacific") || basin.includes("atlantic") || basin.includes("central pacific") || lon < -50) {
+            layer = lon < -120 ? "GOES-West_ABI_Band13_Clean_Infrared" : "GOES-East_ABI_Band13_Clean_Infrared";
+            sensorName = "NOAA GOES ABI (10.3 µm)";
         }
 
-        // Eyewall crosshair
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
-        ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(cx - 10, cy); ctx.lineTo(cx + 10, cy);
-        ctx.moveTo(cx, cy - 10); ctx.lineTo(cx, cy + 10);
-        ctx.stroke();
+        if (layer && img && wrap && noData) {
+            const minLat = Math.max(-85, lat - 5.0);
+            const maxLat = Math.min(85, lat + 5.0);
+            const minLon = Math.max(-180, lon - 5.0);
+            const maxLon = Math.min(180, lon + 5.0);
+
+            const wmsUrl = `https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi?SERVICE=WMS&REQUEST=GetMap&LAYERS=${layer}&VERSION=1.3.0&FORMAT=image/png&TRANSPARENT=true&WIDTH=340&HEIGHT=160&CRS=EPSG:4326&BBOX=${minLat},${minLon},${maxLat},${maxLon}&TIME=${dateStr}`;
+
+            img.src = wmsUrl;
+            img.style.display = "block";
+            noData.style.display = "none";
+            if (timeBadge) timeBadge.textContent = `Acquired: ${dateStr} (NASA GIBS)`;
+            if (sensorEl) sensorEl.textContent = sensorName;
+            if (titleEl) titleEl.textContent = `${sensorName} Imagery`;
+        } else if (img && noData) {
+            img.style.display = "none";
+            noData.style.display = "flex";
+            if (timeBadge) timeBadge.textContent = "No imagery";
+            if (sensorEl) sensorEl.textContent = "None for Basin";
+            if (titleEl) titleEl.textContent = "Satellite Imagery (NASA GIBS)";
+        }
+    }
+
+    renderSatelliteIRCanvas(storm) {
+        // Alias for backwards compatibility
+        this.renderSatelliteImagery(storm);
     }
 }
 

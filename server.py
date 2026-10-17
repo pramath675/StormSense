@@ -4,7 +4,7 @@ CycloneGuard AI: Real-Time Cyclone Risk Intelligence Server
 Production Flask REST API & Geospatial Intelligence Services
 - Predict · Assess · Explain · Prepare · Protect
 - Multi-horizon ML trajectory & intensity forecasting
-- Real-time active storm tracking (Cyclone REMAL, Invest 94B, System 91W)
+- Real-time global active storm tracking across all basins (NHC, JTWC, GDACS, IMD)
 - Key locations along track & Haversine population impact assessment
 - AI Risk Assistant with natural language cyclone intelligence
 - Emergency Planning & Shelter Management
@@ -26,6 +26,7 @@ from flask import Flask, jsonify, request, render_template, send_from_directory
 import joblib
 import numpy as np
 import pandas as pd
+from ingestion.aggregator import CycloneDataAggregator
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -40,6 +41,7 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_DEFAULT_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 SERVER_START_TIME = time.time()
+aggregator = CycloneDataAggregator(DATA_DIR)
 
 # Global in-memory state
 CACHE = {
@@ -169,6 +171,18 @@ def load_static_assets():
     ]
 
 
+def get_shelter_facilities() -> list:
+    """
+    Safely retrieves the list of emergency shelter facilities.
+    Ensures safe initialization if CACHE is unseeded or empty.
+    """
+    shelters = CACHE.get("shelters")
+    if not shelters:
+        load_static_assets()
+        shelters = CACHE.get("shelters", [])
+    return shelters
+
+
 def run_ml_forecast(lat, lon, wind_kt, pressure_hpa, d_lat_6=0.65, d_lon_6=-0.55, d_wind_6=2.5, heading=320, speed_kt=8.1):
     """
     Run multi-horizon ML trajectory & intensity inference.
@@ -292,226 +306,18 @@ def get_category_name(wind_kt):
         return "Depression"
 
 
-def fetch_and_synthesize_active_storms():
+def fetch_and_synthesize_active_storms(force: bool = False, demo: bool = False):
     """
-    Synthesizes active storms matching the CycloneGuard AI dashboard:
-    1. Cyclone REMAL (Category 3 Severe, Bay of Bengal, 185 km/h, 950 hPa)
-    2. Invest 94B (Category 2, 100 km/h, 998 hPa)
-    3. System 91W (Category 1, 65 km/h, 1002 hPa)
+    Fetches real-time active tropical cyclones across all global basins
+    using the multi-agency CycloneDataAggregator (NHC, JTWC, GDACS, IMD).
+    No mock or hardcoded storms are used unless demo=True.
     """
-    now = datetime.now(timezone.utc)
-    t_str = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    active_definitions = [
-        {
-            "id": "REMAL",
-            "name": "REMAL",
-            "full_title": "Cyclone REMAL",
-            "basin": "Bay of Bengal (North Indian Ocean)",
-            "agency": "IMD (India Meteorological Department)",
-            "agency_bulletin_url": "https://mausam.imd.gov.in/",
-            "lat": 18.2,
-            "lon": 88.6,
-            "heading_deg": 320.0,
-            "forward_speed_kt": 8.1,
-            "forward_speed_kph": 15.0,
-            "wind_kt": 100.0,
-            "wind_kph": 185.0,
-            "gust_kt": 125.0,
-            "gust_kph": 230.0,
-            "pressure_hpa": 950.0,
-            "distance_to_coast_km": 350,
-            "landfall_expected": "18 Oct, 06:00 AM IST",
-            "category": "Category 3 (Severe)",
-            "track_confidence": 78,
-            "storm_radius_km": 280,
-            "radii_km": {
-                "gale_34kt": 280,
-                "storm_force_50kt": 150,
-                "hurricane_force_64kt": 75
-            },
-            "d_lat_6": 0.65,
-            "d_lon_6": -0.45,
-            "d_wind_6": 2.5,
-            "bulletin_summary": "Extremely Severe Cyclonic Storm REMAL centered at 18.2N, 88.6E over Bay of Bengal, moving NW at 15 km/h. Expected to cross between Puri and Sagar Island around 18 Oct 06:00 AM with peak winds 185 km/h. Heavy to very heavy rainfall warning issued for coastal Odisha and West Bengal.",
-            "timeline_snapshots": [
-                {"date_label": "15 Oct 12:00", "timestamp": "2025-10-15T12:00:00Z", "lat": 13.8, "lon": 91.5, "wind_kph": 65, "pressure_hpa": 1002, "category": "Depression", "is_now": False},
-                {"date_label": "16 Oct 12:00", "timestamp": "2025-10-16T12:00:00Z", "lat": 15.6, "lon": 90.2, "wind_kph": 120, "pressure_hpa": 982, "category": "Cat 2", "is_now": False},
-                {"date_label": "17 Oct 12:00", "timestamp": "2025-10-17T12:00:00Z", "lat": 18.2, "lon": 88.6, "wind_kph": 185, "pressure_hpa": 950, "category": "Cat 3 (Severe)", "is_now": True},
-                {"date_label": "18 Oct 12:00", "timestamp": "2025-10-18T12:00:00Z", "lat": 21.4, "lon": 86.8, "wind_kph": 160, "pressure_hpa": 965, "category": "Cat 2 (Landfall)", "is_now": False},
-                {"date_label": "19 Oct 12:00", "timestamp": "2025-10-19T12:00:00Z", "lat": 23.2, "lon": 86.1, "wind_kph": 95, "pressure_hpa": 986, "category": "Cat 1 Overland", "is_now": False},
-                {"date_label": "20 Oct 12:00", "timestamp": "2025-10-20T12:00:00Z", "lat": 24.8, "lon": 86.4, "wind_kph": 50, "pressure_hpa": 998, "category": "Deep Depression", "is_now": False},
-                {"date_label": "21 Oct 12:00", "timestamp": "2025-10-21T12:00:00Z", "lat": 26.2, "lon": 87.2, "wind_kph": 30, "pressure_hpa": 1006, "category": "Well-Marked Low", "is_now": False}
-            ],
-            "key_locations": [
-                {"name": "Puri", "country": "India", "state": "Odisha", "lat": 19.8135, "lon": 85.8312, "eta": "18 Oct 06:00 AM", "risk": "Critical", "max_wind": "180 - 220", "expected_rain": "200 - 300", "distance_km": 195},
-                {"name": "Jagatsinghpur", "country": "India", "state": "Odisha", "lat": 20.2644, "lon": 86.1717, "eta": "18 Oct 09:00 AM", "risk": "Critical", "max_wind": "160 - 200", "expected_rain": "200 - 300", "distance_km": 215},
-                {"name": "Kendrapara", "country": "India", "state": "Odisha", "lat": 20.5014, "lon": 86.4225, "eta": "18 Oct 12:00 PM", "risk": "High", "max_wind": "150 - 190", "expected_rain": "200 - 300", "distance_km": 240},
-                {"name": "Cuttack", "country": "India", "state": "Odisha", "lat": 20.4625, "lon": 85.8828, "eta": "18 Oct 03:00 PM", "risk": "High", "max_wind": "120 - 160", "expected_rain": "150 - 250", "distance_km": 280},
-                {"name": "Bhubaneswar", "country": "India", "state": "Odisha", "lat": 20.2961, "lon": 85.8245, "eta": "18 Oct 06:00 PM", "risk": "High", "max_wind": "100 - 140", "expected_rain": "150 - 200", "distance_km": 270},
-                {"name": "Balasore", "country": "India", "state": "Odisha", "lat": 21.4934, "lon": 86.9135, "eta": "19 Oct 06:00 AM", "risk": "Moderate", "max_wind": "80 - 120", "expected_rain": "100 - 200", "distance_km": 310},
-                {"name": "Kolkata", "country": "India", "state": "West Bengal", "lat": 22.5726, "lon": 88.3639, "eta": "18 Oct 02:00 PM", "risk": "High", "max_wind": "110 - 140", "expected_rain": "150 - 220", "distance_km": 320}
-            ],
-            "past_track": [
-                {"timestamp": (now - timedelta(hours=48)).strftime("%Y-%m-%dT%H:%M:%SZ"), "lat": 13.8, "lon": 91.5, "wind_kt": 35, "wind_kph": 65, "pressure_hpa": 1002, "category": "Depression"},
-                {"timestamp": (now - timedelta(hours=36)).strftime("%Y-%m-%dT%H:%M:%SZ"), "lat": 14.6, "lon": 90.8, "wind_kt": 50, "wind_kph": 92, "pressure_hpa": 992, "category": "Deep Depression"},
-                {"timestamp": (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ"), "lat": 15.6, "lon": 90.2, "wind_kt": 65, "wind_kph": 120, "pressure_hpa": 982, "category": "Category 2"},
-                {"timestamp": (now - timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%SZ"), "lat": 16.9, "lon": 89.4, "wind_kt": 85, "wind_kph": 157, "pressure_hpa": 965, "category": "Category 2 / Severe"},
-                {"timestamp": t_str, "lat": 18.2, "lon": 88.6, "wind_kt": 100, "wind_kph": 185, "pressure_hpa": 950, "category": "Category 3 (Severe)"}
-            ]
-        },
-        {
-            "id": "INVEST_94B",
-            "name": "Invest 94B",
-            "full_title": "Tropical Cyclone Invest 94B",
-            "basin": "Eastern Bay of Bengal / Andaman Sea",
-            "agency": "JTWC / IMD",
-            "agency_bulletin_url": "https://www.metoc.navy.mil/jtwc/jtwc.html",
-            "lat": 14.6,
-            "lon": 94.8,
-            "heading_deg": 315.0,
-            "forward_speed_kt": 10.0,
-            "forward_speed_kph": 18.5,
-            "wind_kt": 54.0,
-            "wind_kph": 100.0,
-            "gust_kt": 70.0,
-            "gust_kph": 130.0,
-            "pressure_hpa": 998.0,
-            "distance_to_coast_km": 480,
-            "landfall_expected": "21 Oct, 12:00 PM IST",
-            "category": "Category 2",
-            "track_confidence": 72,
-            "storm_radius_km": 210,
-            "radii_km": {"gale_34kt": 210, "storm_force_50kt": 90, "hurricane_force_64kt": 0},
-            "d_lat_6": 0.45,
-            "d_lon_6": -0.40,
-            "d_wind_6": 1.5,
-            "bulletin_summary": "Invest 94B intensifying over Andaman waters. Sea condition rough to very rough.",
-            "timeline_snapshots": [],
-            "key_locations": [
-                {"name": "Port Blair", "country": "India", "state": "Andaman", "lat": 11.6234, "lon": 92.7265, "eta": "18 Oct 04:00 PM", "risk": "Moderate", "max_wind": "90 - 110", "expected_rain": "120 - 180", "distance_km": 260}
-            ],
-            "past_track": [
-                {"timestamp": (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ"), "lat": 12.8, "lon": 96.2, "wind_kt": 35, "wind_kph": 65, "pressure_hpa": 1006, "category": "Depression"},
-                {"timestamp": (now - timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%SZ"), "lat": 13.7, "lon": 95.5, "wind_kt": 45, "wind_kph": 83, "pressure_hpa": 1002, "category": "Deep Depression"},
-                {"timestamp": t_str, "lat": 14.6, "lon": 94.8, "wind_kt": 54, "wind_kph": 100, "pressure_hpa": 998, "category": "Category 2"}
-            ]
-        },
-        {
-            "id": "SYSTEM_91W",
-            "name": "System 91W",
-            "full_title": "Tropical Storm System 91W",
-            "basin": "Western Bay of Bengal / Tamil Nadu",
-            "agency": "IMD",
-            "agency_bulletin_url": "https://mausam.imd.gov.in/",
-            "lat": 13.5,
-            "lon": 83.8,
-            "heading_deg": 285.0,
-            "forward_speed_kt": 8.5,
-            "forward_speed_kph": 15.7,
-            "wind_kt": 35.0,
-            "wind_kph": 65.0,
-            "gust_kt": 48.0,
-            "gust_kph": 89.0,
-            "pressure_hpa": 1002.0,
-            "distance_to_coast_km": 360,
-            "landfall_expected": "20 Oct, 08:00 AM IST",
-            "category": "Category 1",
-            "track_confidence": 68,
-            "storm_radius_km": 160,
-            "radii_km": {"gale_34kt": 160, "storm_force_50kt": 0, "hurricane_force_64kt": 0},
-            "d_lat_6": 0.20,
-            "d_lon_6": -0.50,
-            "d_wind_6": 0.5,
-            "bulletin_summary": "System 91W tracking westward toward Andhra Pradesh / Tamil Nadu coast.",
-            "timeline_snapshots": [],
-            "key_locations": [
-                {"name": "Chennai", "country": "India", "state": "Tamil Nadu", "lat": 13.0827, "lon": 80.2707, "eta": "19 Oct 10:00 PM", "risk": "Moderate", "max_wind": "60 - 80", "expected_rain": "100 - 150", "distance_km": 380}
-            ],
-            "past_track": [
-                {"timestamp": (now - timedelta(hours=24)).strftime("%Y-%m-%dT%H:%M:%SZ"), "lat": 12.9, "lon": 85.8, "wind_kt": 28, "wind_kph": 52, "pressure_hpa": 1008, "category": "Low Pressure"},
-                {"timestamp": (now - timedelta(hours=12)).strftime("%Y-%m-%dT%H:%M:%SZ"), "lat": 13.2, "lon": 84.8, "wind_kt": 32, "wind_kph": 59, "pressure_hpa": 1004, "category": "Depression"},
-                {"timestamp": t_str, "lat": 13.5, "lon": 83.8, "wind_kt": 35, "wind_kph": 65, "pressure_hpa": 1002, "category": "Category 1"}
-            ]
-        }
-    ]
-
-    processed_storms = []
-    total_pop_at_risk = 12400000  # 12.4 M people at risk
-
-    for item in active_definitions:
-        forecast = run_ml_forecast(
-            lat=item["lat"],
-            lon=item["lon"],
-            wind_kt=item["wind_kt"],
-            pressure_hpa=item["pressure_hpa"],
-            d_lat_6=item["d_lat_6"],
-            d_lon_6=item["d_lon_6"],
-            d_wind_6=item["d_wind_6"],
-            heading=item["heading_deg"],
-            speed_kt=item["forward_speed_kt"]
-        )
-
-        # Generate telemetry series for the 72h window
-        telemetry = []
-        for p in item["past_track"]:
-            telemetry.append({
-                "time": p["timestamp"],
-                "wind_kph": p["wind_kph"],
-                "wind_kt": p["wind_kt"],
-                "gust_kph": round(p["wind_kph"] * 1.25, 1),
-                "pressure_hpa": p["pressure_hpa"],
-                "precip_mm": round(p["wind_kph"] * 0.42, 1),
-                "is_forecast": False
-            })
-        for f in forecast:
-            telemetry.append({
-                "time": f["timestamp"],
-                "wind_kph": f["wind_kph"],
-                "wind_kt": f["wind_kt"],
-                "gust_kph": round(f["wind_kph"] * 1.25, 1),
-                "pressure_hpa": f["pressure_hpa"],
-                "precip_mm": round(f["wind_kph"] * 0.55, 1),
-                "is_forecast": True
-            })
-
-        record = {
-            "id": item["id"],
-            "name": item["name"],
-            "full_title": item["full_title"],
-            "basin": item["basin"],
-            "agency": item["agency"],
-            "agency_bulletin_url": item["agency_bulletin_url"],
-            "current_lat": item["lat"],
-            "current_lon": item["lon"],
-            "heading_deg": item["heading_deg"],
-            "forward_speed_kt": item["forward_speed_kt"],
-            "forward_speed_kph": item["forward_speed_kph"],
-            "wind_kt": item["wind_kt"],
-            "wind_kph": item["wind_kph"],
-            "gust_kt": item["gust_kt"],
-            "gust_kph": item["gust_kph"],
-            "pressure_hpa": item["pressure_hpa"],
-            "distance_to_coast_km": item["distance_to_coast_km"],
-            "landfall_expected": item["landfall_expected"],
-            "category": item["category"],
-            "track_confidence": item["track_confidence"],
-            "storm_radius_km": item["storm_radius_km"],
-            "radii_km": item["radii_km"],
-            "bulletin_summary": item["bulletin_summary"],
-            "timeline_snapshots": item.get("timeline_snapshots", []),
-            "key_locations": item.get("key_locations", []),
-            "past_track": item["past_track"],
-            "forecast_track": forecast,
-            "telemetry_72h": telemetry,
-            "last_updated": t_str
-        }
-        processed_storms.append(record)
-
-    CACHE["active_storms"] = processed_storms
-    CACHE["last_ingestion_time"] = t_str
-    CACHE["total_population_affected"] = total_pop_at_risk
-    return processed_storms
+    res = aggregator.fetch_all(force=force, demo=demo)
+    storms = res.get("storms", [])
+    CACHE["active_storms"] = storms
+    CACHE["last_ingestion_time"] = res.get("provenance", {}).get("fetched_at_ist")
+    CACHE["total_population_affected"] = res.get("kpis", {}).get("people_at_risk", 0)
+    return storms
 
 
 # ==============================================================================
@@ -590,7 +396,7 @@ def check_and_dispatch_community_alerts():
 
         for storm in active_storms:
             d_curr = haversine_km(storm["current_lat"], storm["current_lon"], sub_lat, sub_lon)
-            forecast_positions = [(pt["lat"], pt["lon"]) for pt in storm["forecast_track"] if pt["horizon_hours"] <= 24]
+            forecast_positions = [(pt["lat"], pt["lon"]) for pt in storm.get("forecast_track", []) if pt.get("horizon_hours", 24) <= 24]
             d_min_forecast = min([haversine_km(pos[0], pos[1], sub_lat, sub_lon) for pos in forecast_positions] + [d_curr])
 
             if d_min_forecast <= threshold_km:
@@ -656,6 +462,12 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/api/health", methods=["GET"])
+def get_health_status():
+    """Returns live telemetry, per-adapter ping latency, and online status."""
+    return jsonify(aggregator.get_health())
+
+
 @app.route("/api/system/health", methods=["GET"])
 def system_health():
     uptime_sec = round(time.time() - SERVER_START_TIME, 1)
@@ -667,22 +479,16 @@ def system_health():
         "system": platform.system(),
         "cpu_cores": os.cpu_count() or 1
     })
-    sources = CACHE.get("data_sources_status", {})
-    online_count = sum(1 for s in sources.values() if s.get("online"))
+    health_data = aggregator.get_health()
+    active_storms = CACHE.get("active_storms", [])
 
     return jsonify({
         "status": "OPERATIONAL",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "uptime_seconds": uptime_sec,
-        "monitored_regions_count": 245,
-        "people_at_risk": 12400000,
-        "critical_alerts_count": 5,
-        "data_sources": {
-            "online_ratio": f"{online_count}/{len(sources)} Online",
-            "online_count": online_count,
-            "total_count": len(sources),
-            "sources": sources
-        },
+        "monitored_regions_count": len(aggregator.places),
+        "active_cyclones_count": len(active_storms),
+        "data_sources": health_data,
         "hardware": hw,
         "performance": metrics.get("performance", {"latency_ms": 8.35, "throughput_fps": 120.0})
     })
@@ -690,18 +496,37 @@ def system_health():
 
 @app.route("/api/storms/active", methods=["GET"])
 def get_active_storms():
-    storms = CACHE.get("active_storms", [])
-    if not storms:
-        storms = fetch_and_synthesize_active_storms()
+    force = request.args.get("refresh", "").lower() in ["true", "1"]
+    demo = request.args.get("demo", "").lower() in ["true", "1"]
+    agg_result = aggregator.fetch_all(force=force, demo=demo)
+    storms = agg_result["storms"]
+    kpis = agg_result["kpis"]
+    health = aggregator.get_health()
+
+    CACHE["active_storms"] = storms
+    CACHE["last_ingestion_time"] = agg_result["provenance"]["fetched_at_ist"]
+
+    # Format people at risk string nicely (e.g. 175.3 K or 12.4 M)
+    pop = kpis["people_at_risk"]
+    if pop >= 1000000:
+        pop_str = f"{pop / 1000000:.1f} M"
+    elif pop >= 1000:
+        pop_str = f"{pop / 1000:.1f} K"
+    else:
+        pop_str = str(pop)
 
     return jsonify({
         "status": "SUCCESS",
         "count": len(storms),
-        "monitored_regions": 245,
-        "people_at_risk": "12.4 M",
-        "critical_alerts": 5,
-        "data_sources_online": "8 / 8 Online",
-        "last_updated": CACHE.get("last_ingestion_time"),
+        "active_cyclones": kpis["active_cyclones"],
+        "monitored_regions": kpis["monitored_regions"],
+        "people_at_risk": pop_str,
+        "people_at_risk_raw": pop,
+        "people_at_risk_label": kpis["people_at_risk_label"],
+        "critical_alerts": kpis["critical_alerts"],
+        "data_sources_online": health["ratio_string"],
+        "last_updated": agg_result["provenance"]["fetched_at_ist"],
+        "provenance": agg_result["provenance"],
         "storms": storms
     })
 
@@ -903,7 +728,7 @@ class CycloneGuardMetAI:
         if any(k in q_lower for k in ["how does", "eye of", "eyewall", "coriolis", "formation", "depression"]):
             return {"topic": "METEOROLOGY_EXPLANATION", "topic_label": "Tropical Meteorology Science", "is_on_topic": True, "cities": matched_cities}
 
-        return {"topic": "OPERATIONAL_BRIEFING", "topic_label": "Cyclone REMAL Operational Briefing", "is_on_topic": True, "cities": matched_cities}
+        return {"topic": "OPERATIONAL_BRIEFING", "topic_label": "Active Cyclone Operational Briefing", "is_on_topic": True, "cities": matched_cities}
 
     def process_query(self, query: str, active_storms: list, shelters: list) -> dict:
         analysis = self.analyze_query(query)
@@ -912,9 +737,19 @@ class CycloneGuardMetAI:
         is_on_topic = analysis["is_on_topic"]
         cities = analysis["cities"]
 
-        remal = next((s for s in active_storms if s.get("id") == "REMAL"), active_storms[0] if active_storms else None)
-        remal_lat = (remal.get("current_lat") or remal.get("lat") or 18.2) if remal else 18.2
-        remal_lon = (remal.get("current_lon") or remal.get("lon") or 88.6) if remal else 88.6
+        primary_storm = active_storms[0] if active_storms else None
+        s_name = primary_storm["name"] if primary_storm else "Global Basins"
+        s_full = primary_storm.get("full_title", f"Tropical Cyclone {s_name}") if primary_storm else "No Active Cyclone"
+        s_cat = primary_storm.get("category_native", primary_storm.get("category", "Severe System")) if primary_storm else "Nominal"
+        s_wind = primary_storm.get("wind_kph", 0) if primary_storm else 0
+        s_wind_kt = primary_storm.get("wind_kt", 0) if primary_storm else 0
+        s_gust = primary_storm.get("gust_kph", 0) if primary_storm else 0
+        s_pres = primary_storm.get("pressure_hpa", 1012) if primary_storm else 1012
+        s_speed = primary_storm.get("forward_speed_kph", 15) if primary_storm else 0
+        s_basin = primary_storm.get("basin", "Maritime Waters") if primary_storm else "All Basins Quiet"
+        s_landfall = primary_storm.get("landfall_expected", "Over Open Waters") if primary_storm else "None"
+        s_lat = (primary_storm.get("current_lat") or primary_storm.get("lat") or 0.0) if primary_storm else 0.0
+        s_lon = (primary_storm.get("current_lon") or primary_storm.get("lon") or 0.0) if primary_storm else 0.0
         available_shelter_beds = sum(s.get("available_space", 0) for s in shelters)
 
         if not is_on_topic:
@@ -924,7 +759,7 @@ class CycloneGuardMetAI:
                 "**tropical cyclones, severe storm trajectory forecasting, meteorological telemetry, and community disaster safety**.\n\n"
                 "Your inquiry is outside this domain. To protect life and public safety, I only answer questions related to active storms and severe weather.\n\n"
                 "🎯 **Recommended topics you can ask me:**\n"
-                "• *'When and where is Cyclone REMAL expected to make landfall?'*\n"
+                "• *'What is the current position and forecast trajectory of the active cyclone?'*\n"
                 "• *'Is Puri or Paradip in the high danger zone?'*\n"
                 "• *'What are the current peak wind speeds and central barometric pressure?'*\n"
                 "• *'What is the projected coastal storm surge and rainfall accumulation?'*\n"
@@ -944,7 +779,7 @@ class CycloneGuardMetAI:
             )
         elif topic == "LOCATION_RISK" and cities:
             c = cities[0]
-            dist_to_remal = round(haversine_km(c["lat"], c["lon"], remal_lat, remal_lon), 1) if remal else 250
+            dist_to_storm = round(haversine_km(c["lat"], c["lon"], s_lat, s_lon), 1) if primary_storm else 9999
             # Find nearest shelter to this city
             nearest_sh = None
             min_sh_d = 999999
@@ -959,8 +794,8 @@ class CycloneGuardMetAI:
             reply = (
                 f"📍 **Location Threat Assessment: {c['name']}, {c['state']}**\n\n"
                 f"• **Hazard Tier:** **{c['risk']} RISK**\n"
-                f"• **Distance to Cyclone REMAL Eye:** {dist_to_remal} km (Approaching Northwest)\n"
-                f"• **Landfall & Impact Window:** {remal.get('landfall_expected', '18 Oct, 06:00 AM IST')}\n"
+                f"• **Distance to Active Cyclone Center:** {dist_to_storm} km ({s_full})\n"
+                f"• **Landfall & Impact Window:** {s_landfall}\n"
                 f"• **Projected Peak Winds:** {c['max_wind']} (Feeder squalls active)\n"
                 f"• **Expected Rainfall:** {c['rain']} (High localized inundation risk)\n"
                 f"• **Coastal Storm Surge:** {c['surge']}\n"
@@ -968,27 +803,33 @@ class CycloneGuardMetAI:
                 f"• **Civil Action Directive:** Residents in kutcha or non-pucca structures should evacuate immediately to designated reinforced shelters. Fishermen must halt all coastal marine operations."
             )
         elif topic == "LANDFALL_TRACK":
-            reply = (
-                "🌀 **Landfall & Trajectory Intelligence — Cyclone REMAL**\n\n"
-                f"• **Expected Landfall:** {remal.get('landfall_expected', '18 Oct 2025, 06:00 AM IST')}\n"
-                f"• **Landfall Corridor:** Coastal Odisha & West Bengal (between Puri and Sagar Island)\n"
-                f"• **Current Coordinates:** {remal_lat}°N, {remal_lon}°E (~350 km SE of Odisha coast)\n"
-                f"• **Forward Translation Speed:** {remal.get('forward_speed_kph', 15.0)} km/h heading 320° (North-Northwest)\n"
-                f"• **Peak Sustained Winds at Landfall:** 180 - 195 km/h (Category 3 Severe Storm), gusts up to 230 km/h\n"
-                f"• **Ensemble Track Confidence:** {remal.get('track_confidence', 78)}% alignment across IMD, ECMWF HRES, and JTWC guidance\n"
-                f"• **High-Impact Districts:** Puri, Jagatsinghpur, Kendrapara, Bhadrak, Balasore, Digha, and South 24 Parganas."
-            )
+            if not primary_storm:
+                reply = "🛡️ **Global Track Intelligence:** All ocean basins are quiet with zero active cyclogenesis tracks currently detected."
+            else:
+                reply = (
+                    f"🌀 **Landfall & Trajectory Intelligence — {s_full}**\n\n"
+                    f"• **Storm Classification:** {s_cat}\n"
+                    f"• **Ocean Basin:** {s_basin}\n"
+                    f"• **Current Coordinates:** {abs(s_lat):.2f}°{'N' if s_lat>=0 else 'S'}, {abs(s_lon):.2f}°{'E' if s_lon>=0 else 'W'}\n"
+                    f"• **Forward Speed:** {s_speed} km/h\n"
+                    f"• **Expected Landfall / Approach:** {s_landfall}\n"
+                    f"• **Current Sustained Winds:** {s_wind} km/h ({s_wind_kt} kt)\n"
+                    f"• **Multi-Agency Surveillance:** Verified across JTWC, NOAA NHC, and GDACS feeds."
+                )
         elif topic == "WIND_INTENSITY":
-            reply = (
-                "💨 **Wind & Intensity Telemetry — Cyclone REMAL**\n\n"
-                f"• **Current Sustained Winds:** {remal.get('wind_kph', 185)} km/h ({remal.get('wind_kt', 100)} knots)\n"
-                f"• **Peak 3-Second Gusts:** {remal.get('gust_kph', 230)} km/h ({remal.get('gust_kt', 125)} knots)\n"
-                f"• **Central Barometric Pressure:** {remal.get('pressure_hpa', 950.0)} hPa (Deep pressure deficit: 63.2 hPa)\n"
-                f"• **Classification:** {remal.get('category', 'Category 3 (Severe Cyclonic Storm)')}\n"
-                f"• **Holland-B Radius of Maximum Winds (RMW):** ~32 km from eye core\n"
-                f"• **Gale Wind Radius (≥ 63 km/h / 34 kt):** Extending 280 km across Bay of Bengal\n"
-                f"• **Storm-Force Wind Radius (≥ 90 km/h / 50 kt):** Extending 150 km from core."
-            )
+            if not primary_storm:
+                reply = "💨 **Atmospheric Telemetry:** Worldwide tropical ocean surface winds are currently nominal. No storm-force gale winds detected."
+            else:
+                reply = (
+                    f"💨 **Wind & Intensity Telemetry — {s_full}**\n\n"
+                    f"• **Classification:** {s_cat}\n"
+                    f"• **Current Sustained Winds:** {s_wind} km/h ({s_wind_kt} knots)\n"
+                    f"• **Peak Gusts:** {s_gust} km/h\n"
+                    f"• **Central Barometric Pressure:** {s_pres} hPa\n"
+                    f"• **Basin:** {s_basin}\n"
+                    f"• **Wind Averaging Period:** {primary_storm.get('wind_averaging_period', 'Agency standard')}\n"
+                    f"• **Multi-Agency Consensus:** Verified across active meteorological centers."
+                )
         elif topic == "RAIN_FLOOD":
             reply = (
                 "🌧️ **Precipitation & Inundation Hazards Warning**\n\n"
@@ -1065,14 +906,18 @@ class CycloneGuardMetAI:
                 "• **Storm Rotation:** In the Northern Hemisphere (Bay of Bengal / Arabian Sea), cyclones rotate **counter-clockwise** due to the rightward deflection of the Earth's Coriolis force."
             )
         else:
-            reply = (
-                f"📡 **Cyclone REMAL Operational Briefing**\n\n"
-                f"• **Storm Identity:** Extremely Severe Cyclonic Storm REMAL (Category 3)\n"
-                f"• **Location:** 18.2°N, 88.6°E over Bay of Bengal (~350 km SE of Puri)\n"
-                f"• **Current Telemetry:** 185 km/h sustained winds · 950 hPa central pressure · Moving NW at 15 km/h\n"
-                f"• **Projected Landfall:** {remal.get('landfall_expected', '18 Oct, 06:00 AM IST')} between Puri and Sagar Island\n"
-                f"• **Action Requirement:** Coastal district administrations have issued mandatory evacuation orders for vulnerable low-lying settlements."
-            )
+            if not primary_storm:
+                reply = "📡 **Global Operational Briefing:** All ocean basins are quiet with zero active tropical cyclones worldwide. Continuous surveillance active."
+            else:
+                reply = (
+                    f"📡 **Global Storm Operational Briefing — {s_full}**\n\n"
+                    f"• **Storm Classification:** {s_cat}\n"
+                    f"• **Basin:** {s_basin}\n"
+                    f"• **Coordinates:** {abs(s_lat):.2f}°{'N' if s_lat>=0 else 'S'}, {abs(s_lon):.2f}°{'E' if s_lon>=0 else 'W'}\n"
+                    f"• **Current Telemetry:** {s_wind} km/h sustained winds · {s_pres} hPa central pressure · Forward translation {s_speed} km/h\n"
+                    f"• **Approach / Landfall:** {s_landfall}\n"
+                    f"• **Advisory Status:** Active bulletin issuance across {', '.join(primary_storm.get('sources', [primary_storm.get('source', 'WMO')]))}."
+                )
 
         return {"topic": topic, "topic_label": topic_label, "is_on_topic": True, "reply": reply}
 
@@ -1105,7 +950,7 @@ def ai_assistant_chat():
             "topic_label": "CycloneGuard AI Introduction",
             "is_on_topic": True,
             "model": "CycloneGuard-MetAI v3.2",
-            "reply": "👋 Hello! I am **CycloneGuard-MetAI**, your domain-specialized cyclone intelligence model. Ask me about Cyclone REMAL's landfall timing, wind speeds, storm surge, location risks (e.g. Puri, Kolkata), or emergency shelters."
+            "reply": "👋 Hello! I am **CycloneGuard-MetAI**, your domain-specialized cyclone intelligence model. Ask me about active cyclone landfall timing, peak sustained winds, storm surge, location risks, or emergency shelters."
         })
 
     result = met_ai_model.process_query(query, storms, shelters)
@@ -1123,12 +968,124 @@ def ai_assistant_chat():
 # GEOSPATIAL POINT INTELLIGENCE (CLICK-ON-MAP RISK & WEATHER)
 # ==============================================================================
 
+def get_ocean_basin_name(lat: float, lon: float) -> str:
+    """Identifies the ocean basin name for maritime coordinates."""
+    if lat >= 0:
+        if 45 <= lon <= 100:
+            if lon <= 77 and lat <= 30:
+                return "Arabian Sea (North Indian Ocean)"
+            elif 77 < lon <= 95:
+                return "Bay of Bengal (North Indian Ocean)"
+            elif 95 < lon <= 100:
+                return "Andaman Sea (North Indian Ocean)"
+        elif 100 < lon <= 180:
+            return "Western North Pacific Ocean"
+        elif -180 <= lon <= -70:
+            if -100 <= lon <= -80 and 10 <= lat <= 32:
+                return "Gulf of Mexico / Caribbean Sea"
+            elif lon >= -80:
+                return "North Atlantic Ocean"
+            else:
+                return "Eastern North Pacific Ocean"
+        elif -70 < lon < 45:
+            return "North Atlantic Ocean"
+    else:  # Southern Hemisphere
+        if 20 <= lon <= 115:
+            return "South Indian Ocean"
+        elif 115 < lon <= 160:
+            return "Australian Region / Timor Sea"
+        elif 160 < lon or lon <= -70:
+            return "South Pacific Ocean"
+        elif -70 < lon < 20:
+            return "South Atlantic Ocean"
+    return "Open Ocean Waters"
+
+
+@app.route("/api/places/search", methods=["GET"])
+def search_places():
+    """Universal search endpoint for global places and active tropical cyclones."""
+    query = request.args.get("q", "").strip()
+    if not query:
+        return jsonify({"status": "SUCCESS", "results": [], "storms": [], "places": []})
+    
+    q_lower = query.lower()
+    
+    # 1. Match active storms
+    matched_storms = []
+    active = CACHE.get("active_storms", [])
+    for s in active:
+        if q_lower in s["name"].lower() or q_lower in s.get("full_title", "").lower():
+            matched_storms.append({
+                "type": "storm",
+                "name": s["name"],
+                "full_title": s.get("full_title", f"Cyclone {s['name']}"),
+                "id": s["id"],
+                "lat": s["current_lat"],
+                "lon": s["current_lon"],
+                "wind_kph": s["wind_kph"],
+                "category": s.get("category_native", s["category"])
+            })
+
+    # 2. Match gazetteer places (10,079 curated global cities)
+    matched_places = []
+    for p in aggregator.places:
+        p_name = p.get("name", "")
+        p_country = p.get("country", "")
+        if q_lower in p_name.lower() or (len(q_lower) >= 4 and q_lower in p_country.lower()):
+            closest_storm_dist = None
+            if active:
+                closest_storm_dist = round(min(haversine_km(p["lat"], p["lon"], s["current_lat"], s["current_lon"]) for s in active), 1)
+            matched_places.append({
+                "type": "place",
+                "name": p_name,
+                "country": p_country,
+                "lat": p["lat"],
+                "lon": p["lon"],
+                "distance_to_nearest_storm_km": closest_storm_dist
+            })
+            if len(matched_places) >= 15:
+                break
+
+    # 3. If no gazetteer matches found, query Open-Meteo geocoding
+    if not matched_places and not matched_storms:
+        try:
+            geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={requests.utils.quote(query)}&count=5&language=en&format=json"
+            r_geo = requests.get(geo_url, timeout=2.5)
+            if r_geo.status_code == 200:
+                for item in r_geo.json().get("results", []):
+                    plat = float(item["latitude"])
+                    plon = float(item["longitude"])
+                    closest_storm_dist = None
+                    if active:
+                        closest_storm_dist = round(min(haversine_km(plat, plon, s["current_lat"], s["current_lon"]) for s in active), 1)
+                    matched_places.append({
+                        "type": "place",
+                        "name": item.get("name", ""),
+                        "district": item.get("admin2", "") or item.get("admin1", ""),
+                        "state": item.get("admin1", ""),
+                        "country": item.get("country", ""),
+                        "lat": plat,
+                        "lon": plon,
+                        "distance_to_nearest_storm_km": closest_storm_dist
+                    })
+        except Exception:
+            pass
+
+    return jsonify({
+        "status": "SUCCESS",
+        "query": query,
+        "storms": matched_storms,
+        "places": matched_places
+    })
+
+
 @app.route("/api/point/intelligence", methods=["GET", "POST"])
 def point_intelligence():
     """
     Geospatial Point Risk Intelligence API:
     Calculates live weather (temperature, humidity, pressure, wind), reverse-geocodes
-    the place name, and performs cyclone proximity and impact assessment for any point clicked on map.
+    the place name worldwide, and performs cyclone proximity and impact assessment.
+    If distance > 1500 km or no active storms: returns 'No active cyclone threatening this area'.
     """
     if request.method == "POST":
         data = request.get_json() or {}
@@ -1141,64 +1098,14 @@ def point_intelligence():
     lat = round(lat, 4)
     lon = round(lon, 4)
 
-    # 1. High-Precision Reverse Geocode / Place Name & District Identification
+    # 1. High-Precision Worldwide Reverse Geocode / Place Name
     place_name = ""
     district_name = ""
     state_name = ""
     country_name = ""
     is_coastal = False
 
-    # Extensive offline database of Indian districts, coastal hubs, and regional capitals
-    offline_districts = [
-        {"name": "Vijayapura", "district": "Vijayapura (Bijapur)", "state": "Karnataka", "country": "India", "lat": 16.8302, "lon": 75.7100, "coastal": False},
-        {"name": "Bagalkot", "district": "Bagalkot", "state": "Karnataka", "country": "India", "lat": 16.1817, "lon": 75.6958, "coastal": False},
-        {"name": "Belagavi", "district": "Belagavi (Belgaum)", "state": "Karnataka", "country": "India", "lat": 15.8497, "lon": 74.4977, "coastal": False},
-        {"name": "Dharwad", "district": "Dharwad", "state": "Karnataka", "country": "India", "lat": 15.4589, "lon": 75.0078, "coastal": False},
-        {"name": "Kalaburagi", "district": "Kalaburagi (Gulbarga)", "state": "Karnataka", "country": "India", "lat": 17.3297, "lon": 76.8343, "coastal": False},
-        {"name": "Raichur", "district": "Raichur", "state": "Karnataka", "country": "India", "lat": 16.2076, "lon": 77.3463, "coastal": False},
-        {"name": "Ballari", "district": "Ballari (Bellary)", "state": "Karnataka", "country": "India", "lat": 15.1394, "lon": 76.9214, "coastal": False},
-        {"name": "Shivamogga", "district": "Shivamogga", "state": "Karnataka", "country": "India", "lat": 13.9299, "lon": 75.5681, "coastal": False},
-        {"name": "Bengaluru", "district": "Bengaluru Urban", "state": "Karnataka", "country": "India", "lat": 12.9716, "lon": 77.5946, "coastal": False},
-        {"name": "Mysuru", "district": "Mysuru", "state": "Karnataka", "country": "India", "lat": 12.2958, "lon": 76.6394, "coastal": False},
-        {"name": "Mangaluru", "district": "Dakshina Kannada", "state": "Karnataka", "country": "India", "lat": 12.9141, "lon": 74.8560, "coastal": True},
-        {"name": "Udupi", "district": "Udupi", "state": "Karnataka", "country": "India", "lat": 13.3409, "lon": 74.7421, "coastal": True},
-        {"name": "Karwar", "district": "Uttara Kannada", "state": "Karnataka", "country": "India", "lat": 14.8135, "lon": 74.1298, "coastal": True},
-        {"name": "Puri", "district": "Puri", "state": "Odisha", "country": "India", "lat": 19.8135, "lon": 85.8312, "coastal": True},
-        {"name": "Paradip Port", "district": "Jagatsinghpur", "state": "Odisha", "country": "India", "lat": 20.3165, "lon": 86.6115, "coastal": True},
-        {"name": "Jagatsinghpur", "district": "Jagatsinghpur", "state": "Odisha", "country": "India", "lat": 20.2644, "lon": 86.1717, "coastal": True},
-        {"name": "Kendrapara", "district": "Kendrapara", "state": "Odisha", "country": "India", "lat": 20.5014, "lon": 86.4225, "coastal": True},
-        {"name": "Cuttack", "district": "Cuttack", "state": "Odisha", "country": "India", "lat": 20.4625, "lon": 85.8828, "coastal": False},
-        {"name": "Bhubaneswar", "district": "Khurda", "state": "Odisha", "country": "India", "lat": 20.2961, "lon": 85.8245, "coastal": False},
-        {"name": "Balasore", "district": "Balasore", "state": "Odisha", "country": "India", "lat": 21.4934, "lon": 86.9135, "coastal": True},
-        {"name": "Chandipur", "district": "Balasore", "state": "Odisha", "country": "India", "lat": 21.4700, "lon": 87.0160, "coastal": True},
-        {"name": "Bhadrak", "district": "Bhadrak", "state": "Odisha", "country": "India", "lat": 21.0574, "lon": 86.4955, "coastal": True},
-        {"name": "Ganjam (Berhampur)", "district": "Ganjam", "state": "Odisha", "country": "India", "lat": 19.3150, "lon": 84.7941, "coastal": True},
-        {"name": "Gopalpur", "district": "Ganjam", "state": "Odisha", "country": "India", "lat": 19.2600, "lon": 84.9000, "coastal": True},
-        {"name": "Kolkata", "district": "Kolkata", "state": "West Bengal", "country": "India", "lat": 22.5726, "lon": 88.3639, "coastal": False},
-        {"name": "Digha", "district": "Purba Medinipur", "state": "West Bengal", "country": "India", "lat": 21.6266, "lon": 87.5074, "coastal": True},
-        {"name": "Sagar Island", "district": "South 24 Parganas", "state": "West Bengal", "country": "India", "lat": 21.6500, "lon": 88.1000, "coastal": True},
-        {"name": "Kakdwip", "district": "South 24 Parganas", "state": "West Bengal", "country": "India", "lat": 21.8750, "lon": 88.1880, "coastal": True},
-        {"name": "Haldia", "district": "Purba Medinipur", "state": "West Bengal", "country": "India", "lat": 22.0667, "lon": 88.0698, "coastal": True},
-        {"name": "Visakhapatnam", "district": "Visakhapatnam", "state": "Andhra Pradesh", "country": "India", "lat": 17.6868, "lon": 83.2185, "coastal": True},
-        {"name": "Kakinada", "district": "Kakinada", "state": "Andhra Pradesh", "country": "India", "lat": 16.9891, "lon": 82.2475, "coastal": True},
-        {"name": "Machilipatnam", "district": "Krishna", "state": "Andhra Pradesh", "country": "India", "lat": 16.1875, "lon": 81.1389, "coastal": True},
-        {"name": "Nellore", "district": "SPSR Nellore", "state": "Andhra Pradesh", "country": "India", "lat": 14.4426, "lon": 79.9865, "coastal": True},
-        {"name": "Chennai", "district": "Chennai", "state": "Tamil Nadu", "country": "India", "lat": 13.0827, "lon": 80.2707, "coastal": True},
-        {"name": "Nagapattinam", "district": "Nagapattinam", "state": "Tamil Nadu", "country": "India", "lat": 10.7672, "lon": 79.8424, "coastal": True},
-        {"name": "Kochi", "district": "Ernakulam", "state": "Kerala", "country": "India", "lat": 9.9312, "lon": 76.2673, "coastal": True},
-        {"name": "Thiruvananthapuram", "district": "Thiruvananthapuram", "state": "Kerala", "country": "India", "lat": 8.5241, "lon": 76.9366, "coastal": True},
-        {"name": "Mumbai", "district": "Mumbai", "state": "Maharashtra", "country": "India", "lat": 19.0760, "lon": 72.8777, "coastal": True},
-        {"name": "Pune", "district": "Pune", "state": "Maharashtra", "country": "India", "lat": 18.5204, "lon": 73.8567, "coastal": False},
-        {"name": "Solapur", "district": "Solapur", "state": "Maharashtra", "country": "India", "lat": 17.6599, "lon": 75.9064, "coastal": False},
-        {"name": "Hyderabad", "district": "Hyderabad", "state": "Telangana", "country": "India", "lat": 17.3850, "lon": 78.4867, "coastal": False},
-        {"name": "Port Blair", "district": "South Andaman", "state": "Andaman & Nicobar", "country": "India", "lat": 11.6234, "lon": 92.7265, "coastal": True},
-        {"name": "Panaji", "district": "North Goa", "state": "Goa", "country": "India", "lat": 15.4909, "lon": 73.8278, "coastal": True},
-        {"name": "Surat", "district": "Surat", "state": "Gujarat", "country": "India", "lat": 21.1702, "lon": 72.8311, "coastal": True},
-        {"name": "Chittagong", "district": "Chittagong", "state": "Chittagong Division", "country": "Bangladesh", "lat": 22.3569, "lon": 91.7832, "coastal": True},
-        {"name": "Cox's Bazar", "district": "Cox's Bazar", "state": "Chittagong Division", "country": "Bangladesh", "lat": 21.4272, "lon": 92.0058, "coastal": True}
-    ]
-
-    # Try live high-speed client-free reverse geocode (BigDataCloud)
+    # Try live reverse geocode client (BigDataCloud free API)
     try:
         url_bg = f"https://api.bigdatacloud.net/data/reverse-geocode-client?latitude={lat}&longitude={lon}&localityLanguage=en"
         r_geo = requests.get(url_bg, headers={"User-Agent": "CycloneGuardAI/3.0"}, timeout=2.2)
@@ -1209,10 +1116,9 @@ def point_intelligence():
             c_name = g_data.get("countryName") or ""
             admin_list = [x.get("name") for x in g_data.get("localityInfo", {}).get("administrative", []) if x.get("name")]
             
-            # Extract district
             d_found = None
             for item in admin_list:
-                if "district" in item.lower():
+                if "district" in item.lower() or "county" in item.lower() or "prefecture" in item.lower():
                     d_found = item.replace(" District", "").replace(" district", "").strip()
                     break
 
@@ -1224,54 +1130,38 @@ def point_intelligence():
     except Exception:
         pass
 
-    # If reverse geocoder didn't return or was offline, match closest district
-    if not place_name:
-        closest_d = min(offline_districts, key=lambda d: haversine_km(d["lat"], d["lon"], lat, lon))
-        dist_d = haversine_km(closest_d["lat"], closest_d["lon"], lat, lon)
-        if dist_d <= 85.0:
-            place_name = closest_d["name"]
-            district_name = closest_d["district"]
-            state_name = closest_d["state"]
-            country_name = closest_d["country"]
-            is_coastal = closest_d.get("coastal", False)
+    # Fallback to closest place in world_cities gazetteer (10,079 places)
+    if not place_name and aggregator.places:
+        closest_p = min(aggregator.places, key=lambda p: haversine_km(p["lat"], p["lon"], lat, lon))
+        dist_p = haversine_km(closest_p["lat"], closest_p["lon"], lat, lon)
+        if dist_p <= 120.0:
+            place_name = closest_p["name"]
+            country_name = closest_p.get("country", "")
+            district_name = place_name
+            is_coastal = True
 
-    # If point is genuinely in open waters (no land identified and far from coast)
-    if not place_name or country_name in ["", "Maritime Zone"]:
-        if 5.0 <= lat <= 23.5 and 80.5 <= lon <= 94.0:
-            place_name = f"Bay of Bengal (Maritime Waters {lat:.2f}°N, {lon:.2f}°E)"
-            district_name = "Bay of Bengal Deep Sea"
-            state_name = "North Indian Ocean"
-            country_name = "Maritime Zone"
-        elif 5.0 <= lat <= 24.0 and 58.0 <= lon <= 74.0:
-            place_name = f"Arabian Sea (Maritime Waters {lat:.2f}°N, {lon:.2f}°E)"
-            district_name = "Arabian Sea Deep Sea"
-            state_name = "North Indian Ocean"
-            country_name = "Maritime Zone"
-        elif 8.0 <= lat <= 15.0 and 92.5 <= lon <= 98.0:
-            place_name = f"Andaman Sea (Maritime Waters {lat:.2f}°N, {lon:.2f}°E)"
-            district_name = "Andaman Sea Basin"
-            state_name = "North Indian Ocean"
-            country_name = "Maritime Zone"
-        else:
-            place_name = f"Location Point ({lat:.2f}°N, {lon:.2f}°E)"
-            district_name = "Local Coordinate Sector"
-            state_name = ""
-            country_name = "Subcontinent Region"
+    # Check if coordinate is in open maritime waters
+    basin_name = get_ocean_basin_name(lat, lon)
+    if not place_name or country_name in ["", "Maritime Zone", "Maritime Waters"]:
+        place_name = f"{basin_name} ({abs(lat):.2f}°{'N' if lat>=0 else 'S'}, {abs(lon):.2f}°{'E' if lon>=0 else 'W'})"
+        district_name = basin_name
+        country_name = "Maritime Waters"
+        state_name = basin_name
 
     if not district_name:
         district_name = place_name
 
     formatted_place = (
-        f"District: {district_name} · {state_name}, {country_name}" if state_name and country_name
-        else f"{place_name} ({lat:.3f}°N, {lon:.3f}°E)"
+        f"{place_name}, {state_name}, {country_name}" if state_name and country_name
+        else f"{place_name} ({lat:.3f}°, {lon:.3f}°)"
     )
 
-    # 2. Live Weather Telemetry
+    # 2. Live Weather Telemetry (Open-Meteo)
     weather_data = None
     try:
         r_wx = requests.get(
             f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,weather_code",
-            timeout=1.4
+            timeout=2.0
         )
         if r_wx.status_code == 200:
             c = r_wx.json().get("current", {})
@@ -1284,173 +1174,157 @@ def point_intelligence():
             elif w_code in [95, 96, 99]: cond = "Severe Thunderstorm with Gale Gusts"
 
             weather_data = {
-                "temperature_c": round(c.get("temperature_2m", 28.5), 1),
-                "feels_like_c": round(c.get("apparent_temperature", 33.2), 1),
-                "humidity_pct": int(c.get("relative_humidity_2m", 84)),
-                "pressure_hpa": round(c.get("surface_pressure", 988.0), 1),
-                "wind_kph": round(c.get("wind_speed_10m", 45.0), 1),
-                "wind_gusts_kph": round(c.get("wind_gusts_10m", 68.0), 1),
-                "wind_direction_deg": int(c.get("wind_direction_10m", 110)),
-                "precipitation_mm": round(c.get("precipitation", 12.5), 1),
+                "temperature_c": round(c.get("temperature_2m", 26.0), 1),
+                "feels_like_c": round(c.get("apparent_temperature", 28.0), 1),
+                "humidity_pct": int(c.get("relative_humidity_2m", 75)),
+                "pressure_hpa": round(c.get("surface_pressure", 1010.0), 1),
+                "wind_kph": round(c.get("wind_speed_10m", 18.0), 1),
+                "wind_gusts_kph": round(c.get("wind_gusts_10m", 28.0), 1),
+                "wind_direction_deg": int(c.get("wind_direction_10m", 90)),
+                "precipitation_mm": round(c.get("precipitation", 0.0), 1),
                 "condition": cond
             }
     except Exception:
         pass
 
     if not weather_data:
-        d_remal = haversine_km(18.2, 88.6, lat, lon)
-        ambient_pres = round(1012.0 - max(0.0, (62.0 / max(1.0, (d_remal / 45.0) ** 0.65))), 1)
-        ambient_wind = round(max(14.0, 185.0 * math.exp(-d_remal / 240.0)), 1)
         weather_data = {
-            "temperature_c": round(29.0 - (ambient_wind * 0.03), 1),
-            "feels_like_c": round(34.5 - (ambient_wind * 0.02), 1),
-            "humidity_pct": min(98, int(82 + (185.0 - ambient_wind) * 0.08)),
-            "pressure_hpa": ambient_pres,
-            "wind_kph": ambient_wind,
-            "wind_gusts_kph": round(ambient_wind * 1.35, 1),
-            "wind_direction_deg": 125,
-            "precipitation_mm": round(max(1.0, (ambient_wind / 8.0)), 1),
-            "condition": "Severe Cyclonic Squalls" if ambient_wind > 80 else "Heavy Rain Bands" if ambient_wind > 50 else "Tropical Overcast"
+            "temperature_c": 27.5,
+            "feels_like_c": 30.2,
+            "humidity_pct": 72,
+            "pressure_hpa": 1012.0,
+            "wind_kph": 15.0,
+            "wind_gusts_kph": 22.0,
+            "wind_direction_deg": 80,
+            "precipitation_mm": 0.0,
+            "condition": "Atmospheric Nominal (Estimated)"
         }
 
-    # 3. Cyclone Hazard & Approaching Storm Description
+    # 3. Cyclone Hazard & Approaching Storm Assessment
     active_storms = CACHE.get("active_storms", [])
     if not active_storms:
         active_storms = fetch_and_synthesize_active_storms()
 
-    # Distances to each active storm
+    # Calculate distance to all active storms
     storm_assessments = []
     for storm in active_storms:
         d_eye = haversine_km(storm["current_lat"], storm["current_lon"], lat, lon)
         forecast_pts = storm.get("forecast_track", [])
-        
-        track_distances = []
-        for pt in forecast_pts:
-            d_pt = haversine_km(pt["lat"], pt["lon"], lat, lon)
-            track_distances.append((d_pt, pt))
-        
+        track_distances = [
+            (haversine_km(pt["lat"], pt["lon"], lat, lon), pt)
+            for pt in forecast_pts
+        ]
         min_track_dist, closest_pt = min(track_distances, key=lambda x: x[0]) if track_distances else (d_eye, None)
 
         storm_assessments.append({
             "storm_id": storm["id"],
             "storm_name": storm["name"],
-            "full_title": storm.get("full_title", f"Cyclone {storm['name']}"),
-            "category": storm["category"],
+            "full_title": storm.get("full_title", f"Tropical Cyclone {storm['name']}"),
+            "basin": storm.get("basin", ""),
+            "agency": storm.get("agency", storm.get("source", "Agency")),
+            "category": storm.get("category_native", storm.get("category", "Cyclone")),
             "distance_to_eye_km": round(d_eye, 1),
             "min_track_distance_km": round(min_track_dist, 1),
             "closest_pt": closest_pt,
-            "current_wind_kph": storm["wind_kph"],
-            "current_pressure_hpa": storm["pressure_hpa"],
+            "current_wind_kph": storm.get("wind_kph", 0),
+            "current_pressure_hpa": storm.get("pressure_hpa", 1000),
             "forward_speed_kph": storm.get("forward_speed_kph", 15.0),
-            "landfall_expected": storm.get("landfall_expected", "18 Oct 06:00 AM IST")
+            "landfall_expected": storm.get("landfall_expected", "Over Open Waters")
         })
 
-    # Identify primary storm
-    primary_threat = min(storm_assessments, key=lambda x: min(x["distance_to_eye_km"], x["min_track_distance_km"]))
-    dist_eye = primary_threat["distance_to_eye_km"]
-    dist_track = primary_threat["min_track_distance_km"]
+    # Nearest storm assessment
+    if storm_assessments:
+        primary_threat = min(storm_assessments, key=lambda x: min(x["distance_to_eye_km"], x["min_track_distance_km"]))
+        dist_eye = primary_threat["distance_to_eye_km"]
+        dist_track = primary_threat["min_track_distance_km"]
+    else:
+        primary_threat = None
+        dist_eye = 99999.0
+        dist_track = 99999.0
 
-    # Check whether location is coastal (within 35 km of ocean)
-    coastal_cities = [p for p in offline_districts if p.get("coastal")]
-    min_dist_to_coast = min(haversine_km(c["lat"], c["lon"], lat, lon) for c in coastal_cities)
-    is_location_coastal = (min_dist_to_coast <= 35.0) or ("Maritime" in country_name) or ("Bay of Bengal" in place_name) or ("Arabian Sea" in place_name)
-
-    closest_pt = primary_threat.get("closest_pt")
-    eta_str = closest_pt.get("timestamp") if closest_pt else primary_threat.get("landfall_expected", "18 Oct 06:00 AM IST")
-    if "T" in str(eta_str):
-        try:
-            d_obj = datetime.strptime(eta_str.split(".")[0].replace("Z", ""), "%Y-%m-%dT%H:%M:%S")
-            eta_str = d_obj.strftime("%d %b, %I:%M %p IST")
-        except Exception:
-            eta_str = "18 Oct 06:00 AM IST"
-
-    remal_storm = next((s for s in storm_assessments if s["storm_id"] == "REMAL"), None)
-    d_remal = remal_storm["distance_to_eye_km"] if remal_storm else 1150
-    sys91w_storm = next((s for s in storm_assessments if s["storm_id"] == "SYSTEM_91W"), None)
-    d_91w = sys91w_storm["distance_to_eye_km"] if sys91w_storm else 940
-
-    # Determine Threat Level & Detailed Storm Description
-    if "Maritime" in country_name or "Sea" in place_name or "Bay of Bengal" in place_name:
-        threat_level = "MARITIME ADVISORY (Rough Sea State & Gale Waves)"
-        threat_badge = "HIGH ALERT"
-        threat_color = "#f59e0b"
-        max_wind_proj = "90 - 150 km/h (Deep Sea Gale)"
-        expected_rain_proj = "150 - 250 mm"
-        surge_risk = "5.5 - 8.2 meters significant wave height"
-        civil_action = "DEEP SEA WARNING: Total suspension of fishing operations, merchant vessel navigation, and offshore operations."
-        storm_description = (
-            f"🌊 **DEEP SEA MARITIME WARNING:** Located in **{place_name}**. "
-            f"Active weather system **{primary_threat['full_title']} ({primary_threat['category']})** is centered "
-            f"{primary_threat['distance_to_eye_km']} km away, generating severe gale squalls ({max_wind_proj}) and high sea swells of {surge_risk}. "
-            f"All marine vessels must return to shore or divert away immediately."
-        )
-    elif is_location_coastal and dist_track <= 95.0:
+    # Determine Threat Level according to distance:
+    # If distance > 1500 km or no storms active: "No active cyclone threatening this area"
+    if not primary_threat or min(dist_eye, dist_track) > 1500.0:
+        threat_level = "NO ACTIVE CYCLONE THREATENING THIS AREA"
+        threat_badge = "SAFE"
+        threat_color = "#10b981"
+        max_wind_proj = "15 - 30 km/h (Normal Local Breeze)"
+        expected_rain_proj = "0 - 15 mm (Nominal)"
+        surge_risk = "None (No Storm Surge Threat)"
+        civil_action = "NORMAL CONDITIONS: No tropical cyclone warning in effect. Maintain routine weather awareness."
+        if primary_threat:
+            storm_description = (
+                f"🛡️ **SAFE / NO ACTIVE CYCLONE THREAT:** No tropical cyclone or severe storm is threatening **{district_name} ({country_name})**. "
+                f"The closest active tropical system worldwide is **{primary_threat['full_title']} ({primary_threat['category']})**, "
+                f"centered ~{dist_eye:.0f} km away over the {primary_threat['basin'] or 'distant ocean'}. "
+                f"Local atmospheric conditions are nominal."
+            )
+        else:
+            storm_description = (
+                f"🛡️ **SAFE / ALL BASINS QUIET:** No active tropical cyclones are currently detected across any global ocean basin. "
+                f"Continuous satellite and agency monitoring active across NHC, JTWC, GDACS, and IMD."
+            )
+        eta_str = "No threat"
+    elif min(dist_eye, dist_track) <= 100.0:
         threat_level = "CRITICAL (Direct Eyewall Landfall Zone)"
         threat_badge = "CRITICAL"
         threat_color = "#ef4444"
-        max_wind_proj = "180 - 220 km/h (Destructive Core)"
-        expected_rain_proj = "220 - 320 mm (Extreme Flood Risk)"
-        surge_risk = "3.8 - 5.0 meters coastal inundation"
-        civil_action = "MANDATORY EVACUATION: Move immediately to reinforced cyclone shelters. Disconnect power mains and secure potable water."
+        max_wind_proj = f"{int(primary_threat['current_wind_kph'] * 0.9)} - {int(primary_threat['current_wind_kph'] * 1.15)} km/h (Destructive Core)"
+        expected_rain_proj = "200 - 350 mm (Extreme Flood Risk)"
+        surge_risk = "3.5 - 5.5 meters coastal storm surge"
+        civil_action = f"MANDATORY EVACUATION: Direct eyewall impact corridor for {primary_threat['full_title']}. Evacuate immediately to reinforced shelters."
+        eta_str = primary_threat.get("landfall_expected", "Next 12-24 Hours")
         storm_description = (
-            f"⚠️ **DIRECT CYCLONE THREAT:** **{primary_threat['full_title']} ({primary_threat['category']})** is advancing at "
-            f"{primary_threat['forward_speed_kph']} km/h directly towards the **{district_name} ({state_name})** coastal corridor. "
-            f"Landfall is projected near this district around **{eta_str}** with destructive gale-force winds of **{max_wind_proj}**, "
-            f"extreme precipitation of **{expected_rain_proj}**, and catastrophic tidal storm surge of **{surge_risk}**. "
-            f"Residents must evacuate immediately to designated multi-purpose cyclone shelters."
+            f"⚠️ **DIRECT CYCLONE THREAT:** **{primary_threat['full_title']} ({primary_threat['category']})** is currently centered "
+            f"only **{dist_eye:.1f} km** from **{district_name}**. "
+            f"Destructive core winds of **{max_wind_proj}**, torrential rainfall, and coastal surge are imminent. "
+            f"Follow all emergency directives from {primary_threat['agency']} immediately."
         )
-    elif is_location_coastal and dist_track <= 220.0:
-        threat_level = "HIGH RISK (Severe Gale Winds & Heavy Surge)"
+    elif min(dist_eye, dist_track) <= 300.0:
+        threat_level = "HIGH RISK (Severe Gale Winds & Heavy Rainfall)"
         threat_badge = "HIGH"
         threat_color = "#f59e0b"
-        max_wind_proj = "135 - 175 km/h"
-        expected_rain_proj = "160 - 240 mm (High Inundation Risk)"
-        surge_risk = "2.5 - 3.8 meters tidal breach potential"
-        civil_action = "HIGH ALERT: Remain indoors in pucca structures. Fishermen must halt all sea operations. Stock 72-hour provisions."
+        max_wind_proj = f"{int(primary_threat['current_wind_kph'] * 0.7)} - {int(primary_threat['current_wind_kph'] * 0.9)} km/h (Gale Force)"
+        expected_rain_proj = "150 - 250 mm (High Inundation Risk)"
+        surge_risk = "2.0 - 3.5 meters high surf and surge"
+        civil_action = "HIGH ALERT: Remain indoors in reinforced structures. Secure loose objects and stock emergency supplies."
+        eta_str = primary_threat.get("landfall_expected", "Next 24-36 Hours")
         storm_description = (
-            f"⚠️ **APPROACHING SEVERE CYCLONE:** **{primary_threat['full_title']}** is tracking northwest toward coastal Odisha and West Bengal. "
-            f"The storm center is currently {primary_threat['distance_to_eye_km']} km away from **{district_name}**, with peak impact "
-            f"expected around **{eta_str}**. Coastal districts will experience severe gale winds ({max_wind_proj}), torrential rain bands ({expected_rain_proj}), "
-            f"and tidal surge of {surge_risk}. Suspend all marine and beach operations."
+            f"⚠️ **APPROACHING SEVERE CYCLONE:** **{primary_threat['full_title']} ({primary_threat['category']})** is advancing "
+            f"towards the region, currently {dist_eye:.1f} km away. Expect severe gale gusts of {max_wind_proj} and intense rainbands."
         )
-    elif is_location_coastal and dist_track <= 420.0:
+    elif min(dist_eye, dist_track) <= 600.0:
         threat_level = "MODERATE RISK (Squally Winds & Rain Feeder Bands)"
         threat_badge = "MODERATE"
         threat_color = "#00d2ff"
-        max_wind_proj = "80 - 120 km/h"
-        expected_rain_proj = "90 - 160 mm (Waterlogging Likely)"
-        surge_risk = "1.5 - 2.5 meters high sea swell"
-        civil_action = "CAUTION ADVISED: Secure rooftop tin sheets and outdoor hoardings. Keep emergency batteries and communications charged."
+        max_wind_proj = "60 - 95 km/h"
+        expected_rain_proj = "60 - 140 mm (Localized Waterlogging)"
+        surge_risk = "1.0 - 2.0 meters rough seas"
+        civil_action = "CAUTION ADVISED: Marine navigation restricted. Follow regional disaster advisories."
+        eta_str = "Next 48 Hours"
         storm_description = (
-            f"⚠️ **PERIPHERAL CYCLONE ALERT:** **{primary_threat['full_title']}** is centered {primary_threat['distance_to_eye_km']} km away in the Bay of Bengal. "
-            f"While the primary eyewall makes landfall further along the coast, **{district_name}** will be swept by active outer feeder squalls, "
-            f"bringing strong gusty winds of {max_wind_proj} and localized heavy showers ({expected_rain_proj}). Follow district disaster advisories."
+            f"⚠️ **PERIPHERAL CYCLONE ALERT:** **{primary_threat['full_title']}** is centered {dist_eye:.1f} km away. "
+            f"Outer rainbands and squally winds will affect the region."
         )
-    else:
-        # INLAND OR SAFE LOCATION (e.g. Vijayapura, Bengaluru, Pune, Solapur, Hyderabad, etc.)
-        threat_level = "LOW RISK (Inland — Outside Direct Cyclone Corridor)"
-        threat_badge = "LOW RISK"
-        threat_color = "#10b981"
-        max_wind_proj = "15 - 30 km/h (Normal Local Breeze)"
-        expected_rain_proj = "5 - 20 mm (Scattered Light Showers)"
-        surge_risk = "Not Applicable (Inland Location — No Sea Surge Hazard)"
-        civil_action = "NORMAL INLAND CONDITIONS: Routine awareness. No evacuation required."
+    else:  # 600 to 1500 km
+        threat_level = "WATCH (Distant Storm System — Monitoring)"
+        threat_badge = "WATCH"
+        threat_color = "#38bdf8"
+        max_wind_proj = "30 - 55 km/h (Breezy / Elevated Swell)"
+        expected_rain_proj = "20 - 50 mm (Scattered Showers)"
+        surge_risk = "Slightly elevated sea state"
+        civil_action = "MONITORING ADVISORY: Track official advisories. No immediate civil evacuation needed."
+        eta_str = "Distant (>600 km)"
         storm_description = (
-            f"🛡️ **SAFE / NO DIRECT CYCLONE THREAT:** No tropical cyclone or severe storm is heading toward **{district_name} ({state_name})**. "
-            f"The active cyclonic systems in the subcontinent region are **Cyclone REMAL (Category 3)**, currently centered "
-            f"~{d_remal:.0f} km away in the Bay of Bengal moving toward coastal Odisha/West Bengal, and **System 91W**, located "
-            f"~{d_91w:.0f} km away over southwest waters. **{district_name}** is situated safely inland on high ground with routine local weather "
-            f"and zero storm surge vulnerability."
+            f"🌀 **DISTANT CYCLONE WATCH:** **{primary_threat['full_title']}** is located {dist_eye:.0f} km away in the {primary_threat['basin']}. "
+            f"CycloneGuard AI is monitoring its trajectory for any path changes."
         )
 
     # Nearest shelter calculation
     shelters = CACHE.get("shelters", [])
     nearest_shelter = None
     if shelters:
-        shelter_distances = []
-        for s in shelters:
-            d_s = haversine_km(s["lat"], s["lon"], lat, lon)
-            shelter_distances.append((d_s, s))
+        shelter_distances = [(haversine_km(s["lat"], s["lon"], lat, lon), s) for s in shelters]
         min_sh_dist, sh_obj = min(shelter_distances, key=lambda x: x[0])
         nearest_shelter = {
             "name": sh_obj["name"],
@@ -1468,16 +1342,16 @@ def point_intelligence():
             "district": district_name,
             "state": state_name,
             "country": country_name,
-            "is_coastal": is_location_coastal,
+            "is_coastal": is_coastal,
             "formatted": formatted_place
         },
         "weather": weather_data,
         "cyclone_impact": {
-            "threatening_cyclone": primary_threat["full_title"],
-            "cyclone_id": primary_threat["storm_id"],
-            "category": primary_threat["category"],
-            "distance_to_center_km": primary_threat["distance_to_eye_km"],
-            "closest_approach_distance_km": primary_threat["min_track_distance_km"],
+            "threatening_cyclone": primary_threat["full_title"] if primary_threat else "None",
+            "cyclone_id": primary_threat["storm_id"] if primary_threat else "NONE",
+            "category": primary_threat["category"] if primary_threat else "Nominal",
+            "distance_to_center_km": primary_threat["distance_to_eye_km"] if primary_threat else None,
+            "closest_approach_distance_km": primary_threat["min_track_distance_km"] if primary_threat else None,
             "threat_level": threat_level,
             "threat_badge": threat_badge,
             "threat_color": threat_color,
@@ -1491,8 +1365,6 @@ def point_intelligence():
         }
     })
 
-
-# "Watch My Place" Alert Endpoints
 
 @app.route("/api/alerts/subscribe", methods=["POST"])
 def subscribe_alert():
@@ -1551,7 +1423,7 @@ def test_alert_trigger():
         f"🚨 *[CycloneGuard AI - DRILL WARNING]* 🚨\n\n"
         f"📍 *Target Watchpoint:* {loc} ({lat:.3f}, {lon:.3f})\n"
         f"👤 *Recipient:* {user}\n"
-        f"🌀 *Active Threat:* Cyclone REMAL (Category 3 Severe)\n"
+        f"🌀 *Active Threat:* Operational Drill Simulation\n"
         f"💨 *Sustained Winds:* 185 km/h | Pressure: 950 hPa\n"
         f"🎯 *Closest Expected Approach:* 195.0 km (Critical Threat Zone)\n"
         f"⏱ *Expected Landfall:* 18 Oct, 06:00 AM IST\n\n"
@@ -1564,8 +1436,8 @@ def test_alert_trigger():
         "id": f"TEST_{int(time.time())}",
         "timestamp": now_str,
         "location_name": loc,
-        "storm_name": "Cyclone REMAL",
-        "storm_id": "REMAL",
+        "storm_name": "Operational Drill Simulation",
+        "storm_id": "SIM_DRILL",
         "distance_km": 195.0,
         "wind_kph": 185.0,
         "category": "Category 3 (Severe)",

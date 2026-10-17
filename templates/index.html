@@ -232,8 +232,8 @@
                     <!-- Cyclone Threat & Impact Assessment -->
                     <div class="pic-threat-box">
                         <div class="pic-threat-header">
-                            <span class="pic-threat-title" id="picThreatTitle">🌀 Threatening: Cyclone REMAL</span>
-                            <span class="pic-threat-badge" id="picThreatBadge">CRITICAL</span>
+                            <span class="pic-threat-title" id="picThreatTitle">🌀 Threat Assessment</span>
+                            <span class="pic-threat-badge" id="picThreatBadge">CALCULATING</span>
                         </div>
                         <div class="pic-threat-details">
                             <div class="pic-detail-row">
@@ -309,7 +309,7 @@
             <div class="right-panel-header">
                 <div class="rph-title-wrap">
                     <span style="color: #ef4444; font-size: 18px;">🌀</span>
-                    <span class="rph-storm-name" id="rightStormName">Cyclone REMAL</span>
+                    <span class="rph-storm-name" id="rightStormName">Loading Active Storm...</span>
                     <span class="cat-pill cat3" id="rightStormCatBadge">Category 3 (Severe)</span>
                 </div>
                 <div class="rph-actions">
@@ -485,18 +485,22 @@
                 <!-- TAB 4: SATELLITE -->
                 <div class="rtab-panel" id="rtab-panel-satellite">
                     <div class="confidence-box">
-                        <div class="confidence-title">INSAT-3DR Rapid-Scan Thermal IR (10.8 µm)</div>
-                        <div style="font-size: 10px; color: #94a3b8; margin: 4px 0 10px;">CDO Eyewall Architecture & Cloud-Top Brightness Temperature</div>
-                        <div style="background: #020617; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; height: 160px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-                            <canvas id="satelliteIRCanvas" width="340" height="160" style="width: 100%; height: 100%;"></canvas>
-                            <span style="position: absolute; bottom: 6px; right: 8px; font-size: 9px; color: #38bdf8; background: rgba(0,0,0,0.8); padding: 2px 6px; border-radius: 3px;">BT: -82.4°C</span>
+                        <div class="confidence-title" id="satPanelTitle">NASA GIBS Geostationary Clean IR</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin: 4px 0 10px;" id="satPanelSubtitle">Clean Infrared Band Cloud-Top Telemetry</div>
+                        <div id="satellitePreviewWrap" style="background: #020617; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; height: 160px; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                            <img id="satelliteRealImg" alt="NASA GIBS Satellite" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
+                            <div id="satelliteNoData" style="display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; font-size: 11px; padding: 12px; text-align: center;">
+                                <span style="font-size: 22px; margin-bottom: 4px;">🛰️</span>
+                                <span>No imagery available for this basin (NASA GIBS)</span>
+                            </div>
+                            <span id="satTimestampBadge" style="position: absolute; bottom: 6px; right: 8px; font-size: 9px; color: #38bdf8; background: rgba(0,0,0,0.85); padding: 2px 6px; border-radius: 3px; border: 1px solid rgba(56,189,248,0.3);">NASA GIBS Live</span>
                         </div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; font-size: 10px;">
                             <div style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 4px;">
-                                <span style="color: #64748b;">Eye Diameter:</span> <strong style="color: #fff;">28 km (Ragged)</strong>
+                                <span style="color: #64748b;">Sensor:</span> <strong style="color: #fff;" id="satSensorName">Himawari-9 AHI</strong>
                             </div>
                             <div style="background: rgba(255,255,255,0.03); padding: 6px; border-radius: 4px;">
-                                <span style="color: #64748b;">Dvorak T-Number:</span> <strong style="color: #ef4444;">T 5.5</strong>
+                                <span style="color: #64748b;">Source:</span> <strong style="color: #38bdf8;" id="satSourceName">NASA Earthdata GIBS</strong>
                             </div>
                         </div>
                     </div>
@@ -505,18 +509,14 @@
                 <!-- TAB 5: MODELS -->
                 <div class="rtab-panel" id="rtab-panel-models">
                     <div class="confidence-box">
-                        <div class="confidence-title">Ensemble Consensus & Multi-Model Spread</div>
-                        <div style="font-size: 10px; color: #94a3b8; margin: 4px 0 10px;">Comparison of 5 major global NWP cyclogenesis models</div>
+                        <div class="confidence-title">Multi-Agency Guidance & Intensity Models</div>
+                        <div style="font-size: 10px; color: #94a3b8; margin: 4px 0 10px;">Contributing meteorological agencies & ATCF telemetry</div>
                         <table class="impact-table">
                             <thead>
-                                <tr><th>Model Agency</th><th>Landfall Target</th><th>Intensity</th><th>Spread</th></tr>
+                                <tr><th>Agency Source</th><th>Averaging Period</th><th>Sustained Wind</th><th>Category Estimate</th></tr>
                             </thead>
-                            <tbody>
-                                <tr><td style="font-weight:700; color:#fff;">IMD GFS</td><td>Puri - Paradip</td><td>185 km/h</td><td>±15 km</td></tr>
-                                <tr><td style="font-weight:700; color:#38bdf8;">ECMWF HRES</td><td>Paradip Coast</td><td>190 km/h</td><td>±20 km</td></tr>
-                                <tr><td style="font-weight:700; color:#f59e0b;">UKMO Unified</td><td>Kendrapara Coast</td><td>175 km/h</td><td>±28 km</td></tr>
-                                <tr><td style="font-weight:700; color:#10b981;">NCEP HWRF</td><td>Puri South</td><td>195 km/h</td><td>±35 km</td></tr>
-                                <tr><td style="font-weight:700; color:#a855f7;">AI-Ensemble</td><td>Jagatsinghpur</td><td>185 km/h</td><td>±12 km</td></tr>
+                            <tbody id="modelsTableBody">
+                                <tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 12px;">Select an active storm to view agency telemetry.</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -525,18 +525,15 @@
                 <!-- TAB 6: ADVISORIES -->
                 <div class="rtab-panel" id="rtab-panel-advisories">
                     <div class="confidence-box">
-                        <div class="confidence-title" style="color: #ef4444;">IMD Special Cyclone Bulletin No. 14</div>
-                        <div style="font-size: 9.5px; color: #94a3b8; margin-top: 2px;">Issued: 17 Oct 2025, 10:00 IST · National Cyclone Warning Centre</div>
-                        <div style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 10.5px; color: #e2e8f0; line-height: 1.5;">
-                            <div style="padding: 8px; background: rgba(239,68,68,0.12); border-left: 3px solid #ef4444; border-radius: 0 4px 4px 0;">
-                                <strong style="color: #ef4444;">RED ALERT:</strong> Coastal districts of Puri, Jagatsinghpur, Kendrapara, Bhadrak, and Balasore. Heavy to very heavy rainfall (>200 mm) accompanied by squally winds of 170-185 km/h gusting to 205 km/h.
+                        <div class="confidence-title" id="advisoryHeaderTitle" style="color: #38bdf8;">Official Agency Warning & Bulletin</div>
+                        <div style="font-size: 9.5px; color: #94a3b8; margin-top: 2px;" id="advisoryHeaderSubtitle">Real-time advisory telemetry</div>
+                        <div id="advisoryContentWrap" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 10.5px; color: #e2e8f0; line-height: 1.5;">
+                            <div style="padding: 10px; background: rgba(56,189,248,0.08); border-left: 3px solid #38bdf8; border-radius: 0 4px 4px 0;" id="advisoryText">
+                                Loading official agency advisory bulletin...
                             </div>
-                            <div style="padding: 8px; background: rgba(245,158,11,0.12); border-left: 3px solid #f59e0b; border-radius: 0 4px 4px 0;">
-                                <strong style="color: #f59e0b;">PORTS ADVISORY:</strong> Great Danger Signal No. 10 hoisted at Paradip and Dhamra Ports. Great Danger Signal No. 9 hoisted at Gopalpur Port.
-                            </div>
-                            <div style="padding: 8px; background: rgba(16,185,129,0.12); border-left: 3px solid #10b981; border-radius: 0 4px 4px 0;">
-                                <strong style="color: #10b981;">NDRF & CIVIL DEFENCE:</strong> 34 NDRF battalions and 60 ODRAF teams deployed in vulnerable coastal blocks with satellite communication sets.
-                            </div>
+                        </div>
+                        <div style="margin-top: 10px; text-align: right;">
+                            <a id="advisoryOfficialLink" href="#" target="_blank" style="font-size: 10px; color: #38bdf8; text-decoration: underline;">View Official Agency Advisory Feed &rarr;</a>
                         </div>
                     </div>
                 </div>
@@ -679,7 +676,7 @@
                 <span class="chat-topic-badge">Model Initialized</span>
                 <div>👋 Hello! I am <strong>CycloneGuard-MetAI</strong>, your domain-specialized cyclone intelligence model. How can I assist your disaster planning? You can ask:</div>
                 <div style="margin-top: 6px; font-size: 10px; color: #38bdf8;">
-                    • "When is REMAL expected to make landfall?"<br>
+                    • "What is the current wind intensity of the active storm?"<br>
                     • "Is Puri or Paradip in the danger zone?"<br>
                     • "What shelters are available with open beds?"<br>
                     • "What should I pack in an emergency kit?"
@@ -688,7 +685,7 @@
         </div>
         <!-- Quick Topic Chips -->
         <div class="chat-quick-topics">
-            <button class="cqt-btn" onclick="app.sendChatMessage('When is Cyclone REMAL expected to make landfall?')">🌀 Landfall ETA</button>
+            <button class="cqt-btn" onclick="app.sendChatMessage('What is the current position and forecast trajectory of the active cyclone?')">🌀 Landfall ETA</button>
             <button class="cqt-btn" onclick="app.sendChatMessage('Is Puri in the danger zone?')">📍 Check City Risk</button>
             <button class="cqt-btn" onclick="app.sendChatMessage('What are the peak wind speeds and gusts?')">💨 Wind Speeds</button>
             <button class="cqt-btn" onclick="app.sendChatMessage('What is the projected storm surge height?')">🌊 Storm Surge</button>
@@ -830,6 +827,16 @@
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+
+    <!-- OFFICIAL AGENCY WARNING DISCLAIMER FOOTER -->
+    <div id="cg-official-disclaimer" style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 99; background: rgba(5, 12, 26, 0.94); backdrop-filter: blur(8px); border-top: 1px solid rgba(255, 255, 255, 0.08); padding: 4px 16px; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <strong style="color: #f59e0b;">⚠️ NOTICE:</strong> For awareness only. Follow official warnings from your national meteorological agency (IMD, NOAA NHC, JMA, BoM, Météo-France).
+        </div>
+        <div style="font-size: 9.5px; color: #64748b;">
+            CycloneGuard AI v2.4 · Real-time Global Multi-Basin Ingestion (NOAA · JTWC · GDACS · Open-Meteo)
         </div>
     </div>
 

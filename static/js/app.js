@@ -36,9 +36,11 @@ class CycloneGuardApp {
         // 5. Fetch Active Storms & Data
         await this.fetchActiveStorms();
 
-        // 6. Select REMAL by default
+        // 6. Select first active global storm
         if (this.activeStorms.length > 0) {
-            this.selectStorm("REMAL");
+            this.selectStorm(this.activeStorms[0].id);
+        } else {
+            this.renderCalmState();
         }
     }
 
@@ -183,12 +185,55 @@ class CycloneGuardApp {
 
     async fetchActiveStorms() {
         try {
-            const r = await fetch("/api/storms/active");
+            const urlParams = new URLSearchParams(window.location.search);
+            const isDemoReq = urlParams.get("demo") === "true";
+            const fetchUrl = isDemoReq ? "/api/storms/active?demo=true" : "/api/storms/active";
+            const r = await fetch(fetchUrl);
             const data = await r.json();
             if (data.status === "SUCCESS") {
                 this.activeStorms = data.storms || [];
+
+                // Check demo mode banner
+                const isDemo = data.demo_mode || isDemoReq;
+                let demoBadge = document.getElementById("demoModeBanner");
+                if (isDemo) {
+                    if (!demoBadge) {
+                        demoBadge = document.createElement("div");
+                        demoBadge.id = "demoModeBanner";
+                        demoBadge.style.cssText = "background: #f59e0b; color: #000; font-weight: 800; font-size: 10px; letter-spacing: 0.8px; padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; margin-left: 10px; box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);";
+                        demoBadge.innerHTML = "⚠️ DEMO MODE: BENCHMARK SIMULATION";
+                        const headerBrand = document.querySelector(".header-brand");
+                        if (headerBrand) headerBrand.appendChild(demoBadge);
+                    }
+                } else if (demoBadge) {
+                    demoBadge.remove();
+                }
+
+                // 1. Update Top Header KPIs
+                const kpiCyclones = document.getElementById("kpiActiveCyclones");
+                if (kpiCyclones) kpiCyclones.textContent = data.active_cyclones !== undefined ? data.active_cyclones : this.activeStorms.length;
+
+                const kpiRegions = document.getElementById("kpiMonitoredRegions");
+                if (kpiRegions) kpiRegions.textContent = data.monitored_regions !== undefined ? data.monitored_regions : 0;
+
+                const kpiPop = document.getElementById("kpiPeopleAtRisk");
+                if (kpiPop) {
+                    kpiPop.textContent = data.people_at_risk || "0";
+                    kpiPop.title = data.people_at_risk_label || "estimated exposure (GDACS)";
+                }
+
+                const kpiAlerts = document.getElementById("kpiCriticalAlerts");
+                if (kpiAlerts) kpiAlerts.textContent = data.critical_alerts !== undefined ? data.critical_alerts : 0;
+
+                const kpiSources = document.getElementById("kpiDataSources");
+                if (kpiSources) kpiSources.textContent = data.data_sources_online || "8 / 8 Online";
+
                 this.renderActiveStormsCards(this.activeStorms);
                 this.globe.renderActiveStorms(this.activeStorms);
+
+                if (this.activeStorms.length === 0) {
+                    this.renderCalmState();
+                }
             }
         } catch (e) {
             console.error("Error fetching active storms:", e);
@@ -199,11 +244,27 @@ class CycloneGuardApp {
         const container = document.getElementById("floatingStormsList");
         if (!container) return;
 
+        if (!storms || storms.length === 0) {
+            container.innerHTML = `
+                <div style="padding: 12px; font-size: 11px; color: #94a3b8; text-align: center;">
+                    🌊 <strong>Ocean Waters Calm</strong><br>
+                    <span style="font-size: 9.5px; color: #64748b;">No active tropical cyclones worldwide.</span>
+                </div>
+            `;
+            return;
+        }
+
         container.innerHTML = storms.map(s => {
+            const wind = s.wind_kph || s.max_wind_kmh || 0;
             let swirlClass = "cyan";
             let pillClass = "cat1";
-            if (s.id === "REMAL") { swirlClass = "red"; pillClass = "cat3"; }
-            else if (s.id === "INVEST_94B") { swirlClass = "amber"; pillClass = "cat2"; }
+            if (wind >= 210) { swirlClass = "red"; pillClass = "cat4"; }
+            else if (wind >= 160) { swirlClass = "red"; pillClass = "cat3"; }
+            else if (wind >= 120) { swirlClass = "amber"; pillClass = "cat2"; }
+            else if (wind < 63) { swirlClass = "emerald"; pillClass = "td"; }
+
+            const nativeCat = s.category_native || s.category || "Tropical System";
+            const sshwsBadge = s.sshws_badge || s.category_sshws_equiv || "";
 
             return `
                 <div class="fac-item ${this.selectedStorm && this.selectedStorm.id === s.id ? 'active-storm' : ''}" onclick="app.selectStorm('${s.id}')">
@@ -216,10 +277,10 @@ class CycloneGuardApp {
                         </div>
                         <div>
                             <div class="fac-storm-name">${s.name}</div>
-                            <div class="fac-storm-telemetry">${s.wind_kph} km/h · ${s.pressure_hpa} hPa</div>
+                            <div class="fac-storm-telemetry">${s.wind_kph} km/h · ${s.basin || ''}</div>
                         </div>
                     </div>
-                    <span class="cat-pill ${pillClass}">Cat ${s.category.includes('3') ? '3' : s.category.includes('2') ? '2' : '1'}</span>
+                    <span class="cat-pill ${pillClass}" title="${sshwsBadge}">${nativeCat}</span>
                 </div>
             `;
         }).join("");
@@ -249,30 +310,120 @@ class CycloneGuardApp {
     }
 
     populateRightPanel(storm) {
-        document.getElementById("rightStormName").textContent = `Cyclone ${storm.name}`;
+        const titlePrefix = (storm.category_native && storm.category_native.toLowerCase().includes("hurricane")) ? "Hurricane" : "Cyclone";
+        document.getElementById("rightStormName").textContent = `${titlePrefix} ${storm.name}`;
+        
         const catBadge = document.getElementById("rightStormCatBadge");
         if (catBadge) {
-            catBadge.textContent = storm.category;
-            catBadge.className = `cat-pill ${storm.id === 'REMAL' ? 'cat3' : 'cat2'}`;
+            catBadge.textContent = storm.category_native || storm.category;
+            const wind = storm.wind_kph || 0;
+            catBadge.className = `cat-pill ${wind >= 210 ? 'cat4' : wind >= 160 ? 'cat3' : wind >= 120 ? 'cat2' : 'cat1'}`;
+            if (storm.sshws_badge) {
+                catBadge.title = storm.sshws_badge;
+            }
         }
 
         // Stats grid
-        document.getElementById("statWindSpeed").textContent = `${storm.wind_kph} km/h`;
+        const period = storm.wind_averaging_period ? ` (${storm.wind_averaging_period})` : "";
+        document.getElementById("statWindSpeed").textContent = `${storm.wind_kph} km/h${period}`;
         document.getElementById("statCentralPressure").textContent = `${storm.pressure_hpa} hPa`;
-        document.getElementById("statMovement").textContent = `NW at ${storm.forward_speed_kph} km/h`;
-        document.getElementById("statDistanceCoast").textContent = `${storm.distance_to_coast_km} km`;
-        document.getElementById("statLandfall").textContent = storm.landfall_expected || "18 Oct, 06:00 AM";
-        document.getElementById("statCategoryIMD").textContent = storm.category;
+        document.getElementById("statMovement").textContent = `${storm.movement_dir_deg || 0}° at ${storm.forward_speed_kph || 0} km/h`;
+        document.getElementById("statDistanceCoast").textContent = `${storm.distance_to_coast_km || '--'} km`;
+        document.getElementById("statLandfall").textContent = storm.landfall_expected || "Over Open Sea";
+        document.getElementById("statCategoryIMD").textContent = `${storm.category_native} · ${storm.sshws_badge || storm.category_sshws_equiv}`;
 
         // Footer KPI
         document.getElementById("kpiMaxWind").textContent = `${storm.wind_kph} km/h`;
         document.getElementById("kpiMinPressure").textContent = `${storm.pressure_hpa} hPa`;
-        document.getElementById("kpiStormRadius").textContent = `${storm.storm_radius_km || 280} km`;
+        document.getElementById("kpiStormRadius").textContent = `${storm.storm_radius_km || 200} km`;
+
+        // Advisories Tab with STALE badge calculation
+        const advTextEl = document.getElementById("advisoryText");
+        if (advTextEl) {
+            advTextEl.textContent = storm.bulletin_text || `Official advisory for ${storm.name}. No bulletin summary available.`;
+        }
+        const advLinkEl = document.getElementById("advisoryOfficialLink");
+        if (advLinkEl) {
+            advLinkEl.href = storm.raw_url || "#";
+            advLinkEl.textContent = `Official ${storm.sources ? storm.sources.join(" / ") : storm.source} Bulletin Feed →`;
+        }
+        const advSub = document.getElementById("advisoryHeaderSubtitle");
+        if (advSub) {
+            const advTimeStr = storm.advisory_time_utc || storm.last_updated;
+            let isStale = false;
+            if (advTimeStr) {
+                const advDate = new Date(advTimeStr.endsWith("Z") ? advTimeStr : advTimeStr + "Z");
+                if (!isNaN(advDate.getTime())) {
+                    const diffHours = (Date.now() - advDate.getTime()) / (3600 * 1000);
+                    if (diffHours > 6) isStale = true;
+                }
+            }
+            const staleBadge = isStale ? `<span style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.5); font-size: 9px; padding: 2px 6px; border-radius: 4px; margin-left: 6px; font-weight: 700;" title="Advisory timestamp is > 6 hours old. Awaiting next agency issuance.">STALE (>6h)</span>` : "";
+            advSub.innerHTML = `Issued: ${storm.advisory_time_ist || storm.advisory_time_utc} ${staleBadge} · Sources: ${(storm.sources || [storm.source]).join(', ')}`;
+        }
+
+        // Models Tab
+        const modelsBody = document.getElementById("modelsTableBody");
+        if (modelsBody) {
+            const multiWinds = storm.multi_agency_winds || {};
+            const keys = Object.keys(multiWinds);
+            if (keys.length > 0) {
+                modelsBody.innerHTML = keys.map(agency => {
+                    const m = multiWinds[agency];
+                    return `
+                        <tr>
+                            <td style="font-weight: 700; color: #fff;">${agency}</td>
+                            <td style="color: #38bdf8;">${m.averaging_period || 'N/A'}</td>
+                            <td style="color: #ef4444; font-weight: 600;">${m.max_wind_kmh} km/h (${m.max_wind_kt} kt)</td>
+                            <td style="color: #f59e0b;">${m.category}</td>
+                        </tr>
+                    `;
+                }).join("");
+            } else {
+                modelsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 12px;">No model data</td></tr>`;
+            }
+        }
+
+        // Satellite Tab: Real NASA GIBS imagery
+        this.charts.renderSatelliteImagery(storm);
+
+        // Dynamic Timeline thumbnails
+        this.renderDynamicTimeline(storm);
+    }
+
+    renderDynamicTimeline(storm) {
+        const strip = document.querySelector(".timeline-thumbnails-strip");
+        if (!strip || !storm.timeline_snapshots || storm.timeline_snapshots.length === 0) return;
+
+        strip.innerHTML = storm.timeline_snapshots.map((snap, idx) => {
+            const isNow = snap.is_now || idx === 0;
+            return `
+                <div class="sat-thumb-box ${isNow ? 'active' : ''}" data-step="${idx}" onclick="app.setTimelineStep(${idx})" title="UTC: ${snap.timestamp || 'N/A'}">
+                    <canvas class="sat-thumb-canvas" width="48" height="46"></canvas>
+                    <span class="sat-thumb-label" style="font-size: 8.5px;">${snap.date_label}</span>
+                </div>
+            `;
+        }).join("");
+
+        strip.querySelectorAll(".sat-thumb-canvas").forEach((canvas, idx) => {
+            const ctx = canvas.getContext("2d");
+            ctx.fillStyle = "#020712";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.beginPath();
+            ctx.arc(24, 23, 10, 0, Math.PI * 2);
+            ctx.fillStyle = idx >= 1 ? "rgba(239, 68, 68, 0.7)" : "rgba(56, 189, 248, 0.7)";
+            ctx.fill();
+        });
     }
 
     renderKeyLocationsTable(locations) {
         const tbody = document.getElementById("keyLocationsTableBody");
         if (!tbody) return;
+
+        if (!locations || locations.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #94a3b8; padding: 16px;">No populated places currently within storm threat radius (< 350 km).</td></tr>`;
+            return;
+        }
 
         tbody.innerHTML = locations.map(loc => {
             let riskClass = "moderate";
@@ -281,7 +432,7 @@ class CycloneGuardApp {
 
             return `
                 <tr onclick="app.inspectLocation(${loc.lat}, ${loc.lon}); app.globe.setInspectionPin(${loc.lat}, ${loc.lon}); app.globe.flyToCoordinates(${loc.lat}, ${loc.lon}, 28000.0)" style="cursor: pointer;" title="Click to view full cyclone & weather intelligence for ${loc.name}">
-                    <td style="font-weight: 700; color: #fff;">${loc.name}</td>
+                    <td style="font-weight: 700; color: #fff;">${loc.name} <span style="font-size: 9px; color: #64748b;">(${loc.country || ''})</span></td>
                     <td style="color: #94a3b8;">${loc.eta}</td>
                     <td><span class="risk-badge-sm ${riskClass}">${loc.risk}</span></td>
                     <td style="color: #ef4444; font-weight: 600;">${loc.max_wind}</td>
@@ -302,47 +453,59 @@ class CycloneGuardApp {
 
     async handleLocationSearch(query) {
         if (!query) return;
-        const clean = query.trim().toLowerCase();
+        const clean = query.trim();
 
         // 1. Check if query matches an active storm
-        const matchedStorm = this.activeStorms.find(s => s.name.toLowerCase().includes(clean));
+        const matchedStorm = this.activeStorms.find(s => 
+            s.name.toLowerCase().includes(clean.toLowerCase()) || 
+            (s.full_title && s.full_title.toLowerCase().includes(clean.toLowerCase()))
+        );
         if (matchedStorm) {
             this.selectStorm(matchedStorm.id);
             return;
         }
 
-        // 2. Comprehensive coastal cities & towns dictionary (zooms in to 15km - 35km town level!)
-        const towns = [
-            { name: "Puri", lat: 19.8135, lon: 85.8312, height: 25000.0 },
-            { name: "Paradip", lat: 20.3165, lon: 86.6115, height: 20000.0 },
-            { name: "Bhubaneswar", lat: 20.2961, lon: 85.8245, height: 35000.0 },
-            { name: "Cuttack", lat: 20.4625, lon: 85.8828, height: 30000.0 },
-            { name: "Jagatsinghpur", lat: 20.2644, lon: 86.1717, height: 20000.0 },
-            { name: "Kendrapara", lat: 20.5014, lon: 86.4225, height: 20000.0 },
-            { name: "Balasore", lat: 21.4934, lon: 86.9135, height: 25000.0 },
-            { name: "Chandipur", lat: 21.4700, lon: 87.0160, height: 15000.0 },
-            { name: "Digha", lat: 21.6266, lon: 87.5074, height: 18000.0 },
-            { name: "Sagar Island", lat: 21.6500, lon: 88.1000, height: 28000.0 },
-            { name: "Haldia", lat: 22.0667, lon: 88.0698, height: 25000.0 },
-            { name: "Kolkata", lat: 22.5726, lon: 88.3639, height: 45000.0 },
-            { name: "Gopalpur", lat: 19.2600, lon: 84.9000, height: 18000.0 },
-            { name: "Visakhapatnam", lat: 17.6868, lon: 83.2185, height: 35000.0 },
-            { name: "Chennai", lat: 13.0827, lon: 80.2707, height: 45000.0 },
-            { name: "Mumbai", lat: 19.0760, lon: 72.8777, height: 50000.0 },
-            { name: "Dhaka", lat: 23.8103, lon: 90.4125, height: 45000.0 }
-        ];
-
-        const matchedTown = towns.find(t => t.name.toLowerCase().includes(clean));
-        if (matchedTown) {
-            this.globe.flyToCoordinates(matchedTown.lat, matchedTown.lon, matchedTown.height);
-            this.globe.setInspectionPin(matchedTown.lat, matchedTown.lon);
-            this.inspectLocation(matchedTown.lat, matchedTown.lon);
-            return;
+        // 2. Query universal search endpoint (/api/places/search)
+        try {
+            const resp = await fetch(`/api/places/search?q=${encodeURIComponent(clean)}`);
+            if (resp.ok) {
+                const data = await resp.json();
+                if (data.storms && data.storms.length > 0) {
+                    this.selectStorm(data.storms[0].id);
+                    return;
+                }
+                if (data.places && data.places.length > 0) {
+                    const place = data.places[0];
+                    this.globe.flyToCoordinates(place.lat, place.lon, 25000.0);
+                    this.globe.setInspectionPin(place.lat, place.lon);
+                    this.inspectLocation(place.lat, place.lon);
+                    return;
+                }
+            }
+        } catch(e) {
+            console.warn("Local gazetteer search fallback:", e);
         }
 
-        // 3. Fallback to OpenStreetMap geocoding for ANY global town or village!
+        // 3. Fallback to Open-Meteo Geocoding API (free, global, high-precision)
         try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+            const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(clean)}&count=1&language=en&format=json`);
+            const data = await res.json();
+            if (data.results && data.results.length > 0) {
+                const item = data.results[0];
+                const lat = parseFloat(item.latitude);
+                const lon = parseFloat(item.longitude);
+                this.globe.flyToCoordinates(lat, lon, 25000.0);
+                this.globe.setInspectionPin(lat, lon);
+                this.inspectLocation(lat, lon);
+                return;
+            }
+        } catch(e) {
+            console.error("Open-Meteo geocoding error:", e);
+        }
+
+        // 4. Fallback to OpenStreetMap Nominatim
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(clean)}&limit=1`);
             const results = await res.json();
             if (results && results.length > 0) {
                 const lat = parseFloat(results[0].lat);
@@ -351,10 +514,11 @@ class CycloneGuardApp {
                 this.globe.setInspectionPin(lat, lon);
                 this.inspectLocation(lat, lon);
             } else {
-                alert(`Location "${query}" not found. Try searching for a city, state, or coastal town.`);
+                alert(`Location "${clean}" not found. Try searching for a city, island, or coastal place.`);
             }
         } catch(e) {
-            console.error("Geocoding error:", e);
+            console.error("Nominatim error:", e);
+            alert(`Location "${clean}" not found.`);
         }
     }
 
@@ -637,9 +801,9 @@ class CycloneGuardApp {
             badgeEl.className = `pic-threat-badge ${threatBadge.toLowerCase().replace(/\s+/g, '-')}`;
             badgeEl.textContent = threatBadge;
 
-            const stormName = impact.threatening_cyclone || "Cyclone REMAL";
-            if (threatBadge.includes("LOW") || threatBadge.includes("SAFE")) {
-                document.getElementById("picThreatTitle").innerHTML = `🛡️ ${stormName}`;
+            const stormName = impact.threatening_cyclone || "No Storm Threat";
+            if (threatBadge.includes("LOW") || threatBadge.includes("SAFE") || threatBadge.includes("CALM")) {
+                document.getElementById("picThreatTitle").innerHTML = `🛡️ ${impact.threat_level || 'Safe / Outside Hazard Corridor'}`;
                 badgeEl.style.background = "#10b981";
                 badgeEl.style.color = "#ffffff";
             } else if (threatBadge === "CRITICAL") {
@@ -746,6 +910,92 @@ class CycloneGuardApp {
         if (card) card.style.display = "none";
         if (this.globe && this.globe.clearInspectionPin) {
             this.globe.clearInspectionPin();
+        }
+    }
+
+    renderCalmState() {
+        console.log("[Calm State] All global ocean basins quiet.");
+        this.selectedStorm = null;
+
+        if (this.globe && this.globe.clearForecastTrack) {
+            this.globe.clearForecastTrack();
+        }
+
+        const container = document.getElementById("floatingStormsList");
+        if (container) {
+            container.innerHTML = `
+                <div style="padding: 16px; font-size: 11px; color: #94a3b8; text-align: center;">
+                    <div style="font-size: 26px; margin-bottom: 6px;">🌊</div>
+                    <strong style="color: #10b981; font-size: 12px;">All Ocean Basins Calm</strong><br>
+                    <span style="font-size: 9.5px; color: #64748b;">No active tropical cyclones worldwide.<br>24/7 surveillance active across 8 global feeds.</span>
+                </div>
+            `;
+        }
+
+        const nameEl = document.getElementById("rightStormName");
+        if (nameEl) nameEl.textContent = "All Basins Quiet";
+        const catBadge = document.getElementById("rightStormCatBadge");
+        if (catBadge) {
+            catBadge.textContent = "CALM";
+            catBadge.className = "cat-pill td";
+            catBadge.style.background = "rgba(16, 185, 129, 0.2)";
+            catBadge.style.color = "#10b981";
+            catBadge.title = "No active storms detected worldwide";
+        }
+
+        const statW = document.getElementById("statWindSpeed");
+        if (statW) statW.textContent = "Nominal (< 30 km/h)";
+        const statP = document.getElementById("statCentralPressure");
+        if (statP) statP.textContent = "1012 hPa (Mean)";
+        const statM = document.getElementById("statMovement");
+        if (statM) statM.textContent = "Quiet Waters";
+        const statD = document.getElementById("statDistanceCoast");
+        if (statD) statD.textContent = "N/A";
+        const statL = document.getElementById("statLandfall");
+        if (statL) statL.textContent = "None Expected";
+        const statC = document.getElementById("statCategoryIMD");
+        if (statC) statC.textContent = "Normal Seasonal Conditions";
+
+        const kpiW = document.getElementById("kpiMaxWind");
+        if (kpiW) kpiW.textContent = "0 km/h";
+        const kpiP = document.getElementById("kpiMinPressure");
+        if (kpiP) kpiP.textContent = "1012 hPa";
+        const kpiR = document.getElementById("kpiStormRadius");
+        if (kpiR) kpiR.textContent = "0 km";
+
+        const advTextEl = document.getElementById("advisoryText");
+        if (advTextEl) {
+            advTextEl.innerHTML = `
+                <div style="padding: 12px; background: rgba(16, 185, 129, 0.08); border-left: 3px solid #10b981; border-radius: 4px;">
+                    <strong style="color: #10b981;">🛡️ WMO Global Tropical Cyclone Surveillance Briefing</strong><br><br>
+                    All regional basins (North Indian Ocean, Western Pacific, Eastern Pacific, North Atlantic, Southern Hemisphere) are currently quiet with zero cyclogenesis warnings.<br><br>
+                    <strong>Upcoming WMO Storm Names for 2026/2027:</strong><br>
+                    • <strong>North Indian Ocean (RSMC New Delhi):</strong> Montha, Senyar, Ditum, Ni-halo, Fengal, Shakhti<br>
+                    • <strong>Western North Pacific (JMA Tokyo):</strong> Ewiniar, Maliksi, Gaemi, Prapiroon, Maria, Son-Tinh<br>
+                    • <strong>North Atlantic (NOAA NHC):</strong> Alberto, Beryl, Chris, Debby, Ernesto, Francine, Gordon, Helene<br>
+                    • <strong>Eastern Pacific (NOAA NHC):</strong> Aletta, Bud, Carlotta, Daniel, Emilia, Fabio, Gilma<br>
+                    • <strong>Southern Hemisphere (BoM / MFR):</strong> Ancha, Bakari, Chido, Dikeledi, Elvis
+                </div>
+            `;
+        }
+        const advLinkEl = document.getElementById("advisoryOfficialLink");
+        if (advLinkEl) {
+            advLinkEl.href = "https://mausam.imd.gov.in/";
+            advLinkEl.textContent = "View RSMC New Delhi Regional Bulletins →";
+        }
+        const advSub = document.getElementById("advisoryHeaderSubtitle");
+        if (advSub) {
+            advSub.textContent = "Status: Nominal · 24/7 Automated Surveillance Active";
+        }
+
+        const modelsBody = document.getElementById("modelsTableBody");
+        if (modelsBody) {
+            modelsBody.innerHTML = `<tr><td colspan="4" style="text-align: center; color: #94a3b8; padding: 16px;">All oceans calm. No numerical cyclone forecast tracks active.</td></tr>`;
+        }
+
+        const locsBody = document.getElementById("keyLocationsTableBody");
+        if (locsBody) {
+            locsBody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: #10b981; padding: 16px;">🛡️ All coastal regions report nominal conditions. Zero cyclone exposure.</td></tr>`;
         }
     }
 
