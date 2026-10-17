@@ -42,3 +42,8 @@ Thumbs.db
 
 # Temporary scratch directory
 scratch/
+
+# Environment variables
+.env
+.env.*
+!.env.example

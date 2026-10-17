@@ -1,9 +1,9 @@
-# CycloneGuard AI — Real-Time Global Cyclone Risk Intelligence
+# StormSense — AI-Powered Tropical Cyclone Monitoring and Forecasting
 
 > **Predict · Assess · Explain · Prepare · Protect**  
-> An enterprise-grade, full-stack geospatial intelligence and disaster early-warning platform. Built with **Flask**, **CesiumJS (3D Digital Earth)**, **Doppler Eyewall Radar Reflectivity**, **Physics-Informed ML Trajectory Forecasting**, **Global Multi-Agency Ingestion (NOAA NHC, JTWC, GDACS, IMD)**, **NASA GIBS Geostationary Clean Infrared Satellite Imagery**, and community alert dispatch via **Telegram Bot API**.
+> An enterprise-grade, full-stack geospatial intelligence and disaster early-warning platform powered by the CycloneGuard engine. Built with **Flask**, **CesiumJS (3D Digital Earth)**, **Doppler Eyewall Radar Reflectivity**, **Physics-Informed ML Trajectory Forecasting**, **Global Multi-Agency Ingestion (NOAA NHC, JTWC, GDACS, IMD)**, **NASA GIBS Geostationary Clean Infrared Satellite Imagery**, and community alert dispatch via **Telegram Bot API**.
 
-![CycloneGuard AI Live Dashboard Preview](reference_images/CycloneGuard%20AI%20Live%20Tracking%20Dashboard.png)
+![StormSense Live Dashboard Preview](reference_images/CycloneGuard%20AI%20Live%20Tracking%20Dashboard.png)
 
 ---
 
