@@ -98,7 +98,7 @@ class TestBasinIntensityScales(unittest.TestCase):
         self.assertEqual(get_wind_averaging_period("NOAA NHC"), "1-minute sustained")
         self.assertEqual(get_wind_averaging_period("JTWC"), "1-minute sustained")
         self.assertEqual(get_wind_averaging_period("IMD"), "3-minute sustained")
-        self.assertEqual(get_wind_averaging_period("GDACS"), "10-minute sustained")
+        self.assertEqual(get_wind_averaging_period("GDACS"), "averaging period not stated")
         self.assertEqual(get_wind_averaging_period("JMA"), "10-minute sustained")
 
 

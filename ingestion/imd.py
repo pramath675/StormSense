@@ -20,6 +20,13 @@ class IMDAdapter(BaseAdapter):
 
     def __init__(self):
         super().__init__(name="IMD RSMC New Delhi", default_ttl_sec=600)
+        self.fixed_status = "DEGRADED"
+
+    def get_health(self) -> dict:
+        h = super().get_health()
+        h["status"] = "DEGRADED"
+        h["note"] = "RSMC New Delhi publishes bulletins in binary PDF format only; no machine-readable CAP/JSON feed. NIO coverage delegated to JTWC & GDACS."
+        return h
 
     def _fetch_live(self) -> list:
         headers = {

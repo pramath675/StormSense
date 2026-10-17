@@ -179,7 +179,9 @@ class GDACSAdapter(BaseAdapter):
                 "movement_speed_kt": 8.1,
                 "category_native": f"GDACS {alert_level} Alert",
                 "category_sshws_equiv": cat_sshws,
-                "wind_averaging_period": "10-min",
+                "wind_averaging_period": "averaging period not stated",
+                "wind_source_type": "modeled disaster impact estimate (averaging period not stated)",
+                "wind_note": "Averaging period not stated in GDACS feed. Modeled disaster estimate, not calibrated anemometer observation.",
                 "wind_radii": {
                     "gale_34kt": round(wind_kt * 2.0, 1) if wind_kt >= 34 else 0,
                     "storm_force_50kt": round(wind_kt * 1.2, 1) if wind_kt >= 50 else 0,

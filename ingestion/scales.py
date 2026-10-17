@@ -117,7 +117,9 @@ def get_wind_averaging_period(source: str) -> str:
     s_lower = (source or "").lower()
     if "imd" in s_lower:
         return "3-minute sustained"
-    elif any(k in s_lower for k in ["gdacs", "jma", "bom", "australia"]):
+    elif "gdacs" in s_lower:
+        return "averaging period not stated"
+    elif any(k in s_lower for k in ["jma", "bom", "australia"]):
         return "10-minute sustained"
     else:
         return "1-minute sustained"

@@ -8,13 +8,20 @@ Verifies:
 """
 
 import unittest
+from unittest import mock
 from server import app, CACHE, haversine_km, get_ocean_basin_name
+from tests.mock_network import mock_requests_get
 
 
 class TestPointIntelligenceAndSearch(unittest.TestCase):
 
     def setUp(self):
         self.client = app.test_client()
+        self.patcher = mock.patch("requests.get", side_effect=mock_requests_get)
+        self.patcher.start()
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test_ocean_basin_name_resolution(self):
         # Bay of Bengal

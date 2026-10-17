@@ -519,6 +519,7 @@ def get_active_storms():
         "status": "SUCCESS",
         "count": len(storms),
         "active_cyclones": kpis["active_cyclones"],
+        "places_within_500km": kpis.get("places_within_500km", kpis["monitored_regions"]),
         "monitored_regions": kpis["monitored_regions"],
         "people_at_risk": pop_str,
         "people_at_risk_raw": pop,

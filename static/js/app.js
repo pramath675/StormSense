@@ -214,7 +214,10 @@ class CycloneGuardApp {
                 if (kpiCyclones) kpiCyclones.textContent = data.active_cyclones !== undefined ? data.active_cyclones : this.activeStorms.length;
 
                 const kpiRegions = document.getElementById("kpiMonitoredRegions");
-                if (kpiRegions) kpiRegions.textContent = data.monitored_regions !== undefined ? data.monitored_regions : 0;
+                if (kpiRegions) {
+                    kpiRegions.textContent = data.places_within_500km !== undefined ? data.places_within_500km : (data.monitored_regions !== undefined ? data.monitored_regions : 0);
+                    kpiRegions.title = "Populated places within 500 km of active storm centers";
+                }
 
                 const kpiPop = document.getElementById("kpiPeopleAtRisk");
                 if (kpiPop) {
@@ -226,7 +229,7 @@ class CycloneGuardApp {
                 if (kpiAlerts) kpiAlerts.textContent = data.critical_alerts !== undefined ? data.critical_alerts : 0;
 
                 const kpiSources = document.getElementById("kpiDataSources");
-                if (kpiSources) kpiSources.textContent = data.data_sources_online || "8 / 8 Online";
+                if (kpiSources) kpiSources.textContent = data.data_sources_online || "3 / 4 live feeds online";
 
                 this.renderActiveStormsCards(this.activeStorms);
                 this.globe.renderActiveStorms(this.activeStorms);
@@ -370,11 +373,22 @@ class CycloneGuardApp {
             if (keys.length > 0) {
                 modelsBody.innerHTML = keys.map(agency => {
                     const m = multiWinds[agency];
+                    const isGDACS = agency.includes("GDACS") || m.is_modeled_estimate;
+                    const agencyLabel = isGDACS 
+                        ? `${agency} <span style="font-size: 8px; color: #f59e0b; background: rgba(245,158,11,0.15); padding: 1px 4px; border-radius: 3px; border: 1px solid rgba(245,158,11,0.3); font-weight: normal;">MODELED ESTIMATE</span>` 
+                        : agency;
+                    const avgPeriod = isGDACS 
+                        ? `<span style="color: #94a3b8; font-style: italic; font-size: 9.5px;">averaging period not stated</span>` 
+                        : `<span style="color: #38bdf8;">${m.averaging_period || '1-min sustained'}</span>`;
+                    const windDisplay = isGDACS
+                        ? `<span style="color: #f59e0b; font-weight: 600;">~${m.max_wind_kmh} km/h (${m.max_wind_kt} kt)</span><span style="font-size: 8.5px; color: #64748b; display: block;">(modeled estimate)</span>`
+                        : `<span style="color: #ef4444; font-weight: 600;">${m.max_wind_kmh} km/h (${m.max_wind_kt} kt)</span>`;
+
                     return `
                         <tr>
-                            <td style="font-weight: 700; color: #fff;">${agency}</td>
-                            <td style="color: #38bdf8;">${m.averaging_period || 'N/A'}</td>
-                            <td style="color: #ef4444; font-weight: 600;">${m.max_wind_kmh} km/h (${m.max_wind_kt} kt)</td>
+                            <td style="font-weight: 700; color: #fff;">${agencyLabel}</td>
+                            <td>${avgPeriod}</td>
+                            <td>${windDisplay}</td>
                             <td style="color: #f59e0b;">${m.category}</td>
                         </tr>
                     `;

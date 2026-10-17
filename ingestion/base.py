@@ -44,6 +44,7 @@ class BaseAdapter(ABC):
         self.last_fetch_time = 0.0
         self.last_fetch_utc = None
         self.last_fetch_ist = None
+        self.last_success = None
         self.last_status = "UNKNOWN"
         self.last_latency_ms = 0.0
         self.last_error = None
@@ -53,6 +54,7 @@ class BaseAdapter(ABC):
             "source": self.name,
             "status": self.last_status,
             "latency_ms": round(self.last_latency_ms, 1),
+            "last_success": self.last_success,
             "last_fetch_utc": self.last_fetch_utc,
             "last_fetch_ist": self.last_fetch_ist,
             "cached_storms_count": len(self.cached_storms),
@@ -73,8 +75,11 @@ class BaseAdapter(ABC):
             self.last_fetch_time = now
             self.last_fetch_utc = now_utc_iso()
             self.last_fetch_ist = now_ist_str()
-            self.last_status = "ONLINE"
-            self.last_error = None
+            self.last_success = self.last_fetch_utc
+            if not getattr(self, "fixed_status", None):
+                self.last_status = "ONLINE"
+            else:
+                self.last_status = self.fixed_status
             return storms
         except Exception as e:
             t1 = time.time()

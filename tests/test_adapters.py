@@ -3,12 +3,14 @@ Test Suite: Multi-Basin Ingestion Adapters
 Verifies parsing of NHC, JTWC, GDACS, and IMD adapters, wind averaging periods, and data schema normalization.
 """
 
+import os
 import unittest
 from unittest import mock
 from ingestion.nhc import NHCAdapter, get_sshws_category
 from ingestion.jtwc import JTWCAdapter
 from ingestion.gdacs import GDACSAdapter
 from ingestion.imd import IMDAdapter
+from tests.mock_network import mock_requests_get
 
 
 class TestAdapters(unittest.TestCase):
@@ -68,10 +70,12 @@ RMKS/
             self.assertEqual(parsed["forecast_track"][0]["hour"], 12)
             self.assertEqual(parsed["forecast_track"][0]["wind_kt"], 130.0)
 
-    def test_nhc_adapter_schema(self):
-        """Verify NHC adapter output schema conformance."""
+    @mock.patch("requests.get", side_effect=mock_requests_get)
+    def test_nhc_adapter_schema(self, mock_get):
+        """Verify NHC adapter output schema conformance using offline fixtures."""
         adapter = NHCAdapter()
-        storms = adapter.fetch()
+        storms = adapter.fetch(force=True)
+        self.assertGreaterEqual(len(storms), 1)
         for s in storms:
             self.assertIn("id", s)
             self.assertIn("name", s)
@@ -81,12 +85,32 @@ RMKS/
             self.assertEqual(s["wind_averaging_period"], "1-min")
             self.assertEqual(s["source"], "NOAA NHC")
 
-    def test_imd_truthful_attribution(self):
-        """Verify IMD adapter never claims IMD source unless genuinely retrieved."""
-        adapter = IMDAdapter()
-        storms = adapter.fetch()
+    @mock.patch("requests.get", side_effect=mock_requests_get)
+    def test_gdacs_wind_averaging_period(self, mock_get):
+        """Verify GDACS adapter states 'averaging period not stated' and flags modeled estimate."""
+        adapter = GDACSAdapter()
+        storms = adapter.fetch(force=True)
+        self.assertGreaterEqual(len(storms), 1)
         for s in storms:
-            self.assertEqual(s["source"], "IMD")
+            self.assertEqual(s["wind_averaging_period"], "averaging period not stated")
+            self.assertIn("not stated", s.get("wind_source_type", ""))
+
+    @mock.patch("requests.get", side_effect=mock_requests_get)
+    def test_imd_truthful_attribution(self, mock_get):
+        """Verify IMD adapter reports DEGRADED and never invents storm data."""
+        adapter = IMDAdapter()
+        storms = adapter.fetch(force=True)
+        self.assertEqual(len(storms), 0)
+        health = adapter.get_health()
+        self.assertEqual(health["status"], "DEGRADED")
+        self.assertIn("PDF", health.get("note", ""))
+
+    @unittest.skipUnless(os.environ.get("RUN_LIVE_TESTS"), "Skipping live network test. Set RUN_LIVE_TESTS=1 to run.")
+    def test_optional_live_network_probe(self):
+        """Optional live network integration test (skipped by default)."""
+        import requests
+        r = requests.get("https://www.nhc.noaa.gov/index-at.xml", headers={"User-Agent": "CycloneGuard/LiveTest"}, timeout=10)
+        self.assertEqual(r.status_code, 200)
 
 
 if __name__ == "__main__":

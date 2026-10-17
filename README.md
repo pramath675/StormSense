@@ -56,11 +56,21 @@ Tropical cyclone classification varies by regional meteorological authority. Cyc
 
 Every metric displayed on the dashboard header and telemetry panels is computed from live ingested feeds:
 
-1. **Active Cyclones**: Count of unique physical storm systems worldwide after spatial (< 150 km) and temporal (< 6 h) deduplication.
-2. **Monitored Regions**: Number of populated cities/settlements from the 10,079 gazetteer located within active threat cones (< 350 km).
-3. **People at Risk**: Sum of verified GDACS population exposure estimates across non-overlapping storm footprints.
-4. **Critical Alerts**: Count of unique active storms meeting Category 3+ intensity or direct coastal landfall criteria.
-5. **Data Sources Online**: Live health-check ratio (e.g. `8 / 8 Online`) measuring latency to each upstream adapter.
+1. **Active Cyclones**: Count of unique physical storm systems worldwide after spatial (< 150 km) and temporal (< 6 h) deduplication, with stale GDACS-only unconfirmed events excluded.
+2. **Places within 500 km**: Number of populated cities/settlements from the 10,079 gazetteer located within 500 km of any active storm center.
+3. **People at Risk**: Sum of verified GDACS population exposure estimates across non-overlapping storm footprints, labeled `estimated exposure (GDACS)`.
+4. **Critical Alerts**: Count of unique active storms meeting any of:
+   - Max sustained wind $\ge 96\text{ kt}$ (Saffir-Simpson Category 3+ Major Hurricane / Super Typhoon / VSCS), OR
+   - GDACS disaster alert level is `Red`, OR
+   - Basin-native classification contains `Super`, `Extremely`, `Category 4`, or `Category 5`.
+   - *Evaluated today*: 1 storm (**Champi**, Cat 4 equivalent / 115 kt).
+5. **Live Feeds Online**: Real-time health-check ratio (`3 / 4 live feeds online`) tracking the 4 primary live storm feeds:
+   - **NOAA NHC**: `ONLINE`
+   - **JTWC**: `ONLINE`
+   - **GDACS**: `ONLINE`
+   - **IMD RSMC New Delhi**: `DEGRADED` (distributes bulletins in binary PDF only; no machine-readable CAP/JSON feed; NIO coverage delegated to JTWC & GDACS).
+   - *Auxiliary Services*: NASA GIBS and Open-Meteo are probed via real timed HTTP requests (cached ~5m).
+   - *Static Resources*: 10,079 GeoNames Populated Places gazetteer.
 
 ---
 
@@ -119,19 +129,31 @@ To evaluate UI components, training drills, or disaster simulations during calm 
 
 ---
 
-## 🧪 Automated Test Suite
+## 🧪 Automated Test Suite (100% Offline & Deterministic)
 
-Run the complete 21-test validation suite:
+Run the complete 23-test validation suite:
 ```bash
 python -m unittest discover tests
 ```
 
-Tests cover:
-- Real-time adapter fetching (`NHCAdapter`, `JTWCAdapter`, `GDACSAdapter`, `IMDAdapter`).
-- Spatial (< 150 km) and temporal (< 6 h) multi-agency deduplication.
-- All basin-specific intensity scales (IMD, JMA, SSHWS, BoM).
-- Ocean calm state and `DEMO_MODE` toggling.
-- Point intelligence proximity math and universal gazetteer search.
+- **Execution Time**: ~1.3 seconds (runs completely offline against saved feed fixtures in `tests/fixtures/`).
+- **Offline Fixture Architecture**: Real feed responses for NHC, JTWC, GDACS, IMD, NASA GIBS, and Open-Meteo are saved in `tests/fixtures/` and served via `tests/mock_network.py`.
+- **Optional Live Network Test**: One optional live integration test is marked with `@unittest.skipUnless(os.environ.get("RUN_LIVE_TESTS"), ...)` and can be run with:
+  ```bash
+  RUN_LIVE_TESTS=1 python -m unittest discover tests
+  ```
+
+---
+
+## 📜 In-App Data Attribution
+
+CycloneGuard AI gratefully acknowledges and provides official attribution for the following open data sources:
+- **NOAA National Hurricane Center (NHC)**: Public domain hurricane advisories, GIS boundaries, and forecast tracks.
+- **Joint Typhoon Warning Center (JTWC)**: US Navy / USAF public domain Indo-Pacific tropical cyclone warnings.
+- **Global Disaster Alert and Coordination System (GDACS)**: United Nations and European Commission humanitarian disaster impact metrics.
+- **NASA Earth Science Data and Information System (ESDIS) GIBS**: Open global geostationary clean infrared satellite imagery.
+- **Open-Meteo**: High-precision atmospheric weather telemetry and geocoding services (Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+- **GeoNames**: Global geographical populated places database with 10,079 curated settlements (Licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
 
 ---
 

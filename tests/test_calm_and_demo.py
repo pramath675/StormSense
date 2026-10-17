@@ -9,12 +9,18 @@ Verifies:
 import unittest
 from unittest.mock import patch
 from ingestion.aggregator import CycloneDataAggregator
+from tests.mock_network import mock_requests_get
 
 
 class TestCalmAndDemoMode(unittest.TestCase):
 
     def setUp(self):
+        self.patcher = patch("requests.get", side_effect=mock_requests_get)
+        self.patcher.start()
         self.agg = CycloneDataAggregator("data")
+
+    def tearDown(self):
+        self.patcher.stop()
 
     @patch.object(CycloneDataAggregator, "_deduplicate_and_merge")
     def test_calm_state_handling(self, mock_dedup):
